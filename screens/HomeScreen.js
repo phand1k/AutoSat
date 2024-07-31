@@ -46,12 +46,12 @@ const HomeScreens = () => {
     { title: "Задачи", icon: "checkbox-outline", roles: ["Мастер"] },
     { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Менеджер", "Директор", "Мастер"] },
     { title: "Платежи", icon: "cash-outline", roles: ["Директор"] },
-    { title: "Продажи", icon: "cart-outline", roles: ["Менеджер", "Директор"] },
-    { title: "Клиенты", icon: "people-outline", roles: ["Менеджер", "Директор"] },
-    { title: "Остатки", icon: "layers-outline", roles: ["Директор"] },
+    { title: "Продажи", icon: "cart-outline", roles: ["Менеджер", "Директор"], soon: true },
+    { title: "Сотрудники", icon: "people-outline", roles: ["Менеджер", "Директор"] },
+    { title: "Остатки", icon: "layers-outline", roles: ["Директор"], soon: true},
     { title: "Услуги", icon: "briefcase-outline", roles: ["Менеджер", "Директор", "Мастер"] },
-    { title: "Веб-версия", icon: "logo-chrome", roles: ["Менеджер", "Директор"] },
-    { title: "Активность", icon: "pulse-outline", roles: ["Мастер", "Директор"] }
+    { title: "Веб-версия", icon: "logo-chrome", roles: ["Менеджер", "Директор", "Мастер"], soon: true },
+    { title: "Пригласить", icon: "pulse-outline", roles: ["Мастер", "Директор"] }
   ];
 
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
@@ -63,18 +63,21 @@ const HomeScreens = () => {
   };
 
   const handleMenuItemPress = (title) => {
-    if (title === "Активность") {
-      navigation.navigate("LoginHistory", { userRole });
+    if (title === "Пригласить") {
+      navigation.navigate("InviteUser", { userRole });
     } else if (title === "Заказы") {
       navigation.navigate("Мойка", { userRole });
     } else if (title === "Задачи") {
       navigation.navigate("Мои заказ-наряды", { userRole });
-    } else if (title === "Клиенты") {
-      navigation.navigate("Clients", { userRole });
+    } else if (title === "Сотрудники") {
+      navigation.navigate("SalarySettings", { userRole });
     } else if (title === "Веб-версия") {
       Linking.openURL('https://autosat.kz');
     } else if (title === "Платежи") {
       navigation.navigate("Transactions");
+    }
+    else if (title === "Услуги") {
+      navigation.navigate("Список");
     }
   };
 

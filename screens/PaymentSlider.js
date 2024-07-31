@@ -15,6 +15,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const [cashAmountScreenVisible, setCashAmountScreenVisible] = useState(false);
   const [exceedsAmount, setExceedsAmount] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [totalToPay, setTotalToPay] = useState(0);
 
   const totalAmount = parseFloat(selectedOrder.totalServices.replace(' тг', '')) || 0;
 
@@ -66,6 +67,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
             Alert.alert('Ошибка', 'Нельзя завершить заказ-наряд, если не назначены услуги');
             resetSlider();
           } else {
+            setTotalToPay(totalAmount);
             setPaymentModalVisible(true);
             console.log('Свайп вправо выполнен');
           }
@@ -85,7 +87,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/CompleteWashOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -167,7 +169,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
     const amount = parseFloat(paymentAmounts[selectedPaymentMethod]) || totalAmount;
 
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,6 +178,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
         body: JSON.stringify({
           paymentMethodId,
           summ: amount,
+          topay: totalToPay,
         }),
       });
 

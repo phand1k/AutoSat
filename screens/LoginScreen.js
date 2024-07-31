@@ -20,6 +20,7 @@ import { ThemeContext } from '../context/ThemeContext';
 import NetInfo from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
 import { useNavigation } from '@react-navigation/native';
+
 const LoginScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
@@ -40,8 +41,8 @@ const LoginScreen = ({ navigation }) => {
       alert('Failed to get push token for push notification!');
       return;
     }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log(token);
+    token = (await Notifications.getDevicePushTokenAsync()).data;
+    console.log("Push token "+token);
     try {
       const jwtToken = await AsyncStorage.getItem('access_token_avtosat');
       if (!jwtToken) {
@@ -66,20 +67,23 @@ const LoginScreen = ({ navigation }) => {
     return token;
   }
 
-  const handleLogin = async () => {
+  const handleLogin = async (demoPhoneNumber, demoPassword) => {
     const connectionState = await NetInfo.fetch();
     if (!connectionState.isConnected) {
       Alert.alert('Ошибка', 'Нет интернет-соединения');
       return;
     }
 
-    if (!phoneNumber || phoneNumber.includes('_') || !password) {
+    const currentPhoneNumber = demoPhoneNumber || phoneNumber;
+    const currentPassword = demoPassword || password;
+
+    if (!currentPhoneNumber || currentPhoneNumber.includes('_') || !currentPassword) {
       Alert.alert('Ошибка', 'Заполните все поля корректно');
       return;
     }
 
     setLoading(true);
-    const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, '');
+    const unmaskedPhoneNumber = currentPhoneNumber.replace(/[^\d]/g, '');
     try {
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/login', {
         method: 'POST',
@@ -88,7 +92,7 @@ const LoginScreen = ({ navigation }) => {
         },
         body: JSON.stringify({
           phoneNumber: unmaskedPhoneNumber,
-          password,
+          password: currentPassword,
         }),
       });
 
@@ -140,6 +144,12 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const handleDemoLogin = () => {
+    const demoPhoneNumber = '+77024574566';
+    const demoPassword = 'ohaviz11';
+    handleLogin(demoPhoneNumber, demoPassword);
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={{ backgroundColor: activeColors.primary, flex: 1, justifyContent: 'center' }}>
@@ -170,20 +180,11 @@ const LoginScreen = ({ navigation }) => {
           {loading ? (
             <ActivityIndicator size="large" color={activeColors.tint} />
           ) : (
-            <CustomButton label="Войти" onPress={handleLogin} disabled={loading} />
+            <>
+              <CustomButton label="Войти" onPress={() => handleLogin()} disabled={loading} />
+              <CustomButton label="Demo" onPress={handleDemoLogin} />
+            </>
           )}
-          <Text style={{ textAlign: 'center', color: activeColors.tint, marginBottom: 30 }}>Или войдите с помощью...</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 }}>
-            <TouchableOpacity onPress={() => {}} style={{ backgroundColor: activeColors.secondary, borderRadius: 10, paddingHorizontal: 30, paddingVertical: 10 }}>
-              <Image source={require('../images/google.png')} style={{ height: 24, width: 24 }} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => {}} style={{ backgroundColor: activeColors.secondary, borderRadius: 10, paddingHorizontal: 30, paddingVertical: 10 }}>
-              <Image source={require('../images/facebook.png')} style={{ height: 24, width: 24 }} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => {}} style={{ backgroundColor: activeColors.secondary, borderRadius: 10, paddingHorizontal: 30, paddingVertical: 10 }}>
-              <Image source={require('../images/apple.png')} style={{ height: 24, width: 24 }} />
-            </TouchableOpacity>
-          </View>
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
             <Text style={{ color: activeColors.tint }}>Нет аккаунта? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>

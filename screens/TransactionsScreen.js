@@ -31,7 +31,7 @@ const TransactionsScreen = ({ navigation }) => {
         throw new Error('Токен аутентификации недоступен.');
       }
 
-      const url = new URL('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllTransactions');
+      const url = new URL('https://avtosat-001-site1.ftempurl.com/api/Transaction/GetAllTransactions');
       if (startDate && endDate) {
         url.searchParams.append('dateOfStart', startDate);
         url.searchParams.append('dateOfEnd', endDate);

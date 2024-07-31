@@ -36,7 +36,7 @@ const CartScreen = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [roles, setRoles] = useState([]);
   const [selectedRole, setSelectedRole] = useState('');
-  const [refreshing, setRefreshing] = useState(false); // Добавляем состояние для обновления
+  const [refreshing, setRefreshing] = useState(false);
   const ws = useRef(null);
 
   useEffect(() => {
@@ -93,14 +93,14 @@ const CartScreen = () => {
 
   const fetchServices = async () => {
     try {
-      setRefreshing(true); // Начинаем обновление
+      setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
       console.log(token);
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllServices', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/service/GetAllServices', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -118,13 +118,13 @@ const CartScreen = () => {
       console.error('Error fetching services:', error);
       Alert.alert("Error", `Failed to fetch services: ${error.message}`);
     } finally {
-      setRefreshing(false); // Заканчиваем обновление
+      setRefreshing(false);
     }
   };
 
   const fetchUsers = async () => {
     try {
-      setRefreshing(true); // Начинаем обновление
+      setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
       console.log(token);
       if (!token) {
@@ -149,7 +149,7 @@ const CartScreen = () => {
       console.error('Error fetching users:', error);
       Alert.alert("Error", `Failed to fetch users: ${error.message}`);
     } finally {
-      setRefreshing(false); // Заканчиваем обновление
+      setRefreshing(false);
     }
   };
 
@@ -213,7 +213,7 @@ const CartScreen = () => {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/director/deleteservice/?id=${id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/service/deleteservice/?id=${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -305,7 +305,7 @@ const CartScreen = () => {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/CreateService', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/service/CreateService', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -345,22 +345,25 @@ const CartScreen = () => {
   );
 
   const renderUserItem = ({ item }) => (
-    <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
-      <View style={styles.orderDetails}>
-        <StyledText style={styles.itemName}>{item.userName.trim() || 'Без имени'}</StyledText>
-        <StyledText style={styles.itemDescription}>Роль: {item.roles.$values.join(', ') || 'Нет роли'}</StyledText>
+    <TouchableOpacity onPress={() => navigation.navigate('UserDetail', { user: item })}>
+      <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
+        <View style={styles.orderDetails}>
+          <StyledText style={styles.itemName}>{item.userName.trim() || 'Без имени'}</StyledText>
+          <StyledText style={styles.itemDescription}>Роль: {item.roles.$values.join(', ') || 'Нет роли'}</StyledText>
+          <StyledText style={styles.itemPhoneNumber}>Телефон: {item.phoneNumber || 'Не указан'}</StyledText>
+        </View>
+        <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
+          <Ionicons name="trash-outline" size={30} color="red" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => { 
+          setSelectedUser(item); 
+          setSelectedRole(item.roles.$values[0] || ''); 
+          setUserModalVisible(true); 
+        }} style={styles.addIconContainer}>
+          <Ionicons name="create-outline" size={30} color="blue" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
-        <Ionicons name="trash-outline" size={30} color="red" />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => { 
-        setSelectedUser(item); 
-        setSelectedRole(item.roles.$values[0] || ''); 
-        setUserModalVisible(true); 
-      }} style={styles.addIconContainer}>
-        <Ionicons name="create-outline" size={30} color="blue" />
-      </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const handleConfirmDeleteService = (id) => {
@@ -605,6 +608,10 @@ const styles = StyleSheet.create({
   itemDescription: {
     fontSize: 14,
     color: '#ccc',
+  },
+  itemPhoneNumber: {
+    fontSize: 14,
+    color: '#007bff',
   },
   itemPrice: {
     fontSize: 14,

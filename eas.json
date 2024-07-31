@@ -13,6 +13,13 @@
     "production": {}
   },
   "submit": {
-    "production": {}
+    "production": 
+    {
+      "ios": {
+        "appleId": "kalisaev.nursultan@icloud.com",
+        "ascAppId": "6575389746",
+        "appleTeamId": "J34Q6XL84S"
+      }
+    }
   }
 }

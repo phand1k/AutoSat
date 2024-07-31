@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Appearance, StatusBar, SafeAreaView } from "react-native";
+import { Appearance, StatusBar, SafeAreaView, Modal, View, Text, TextInput, TouchableOpacity, Alert, AppState } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from 'expo-notifications';
-
 import AuthLoadingScreen from './components/AuthLoadingScreen';
 import LoginScreen from "./screens/LoginScreen";
 import Footer from "./components/Footer";
@@ -22,13 +21,12 @@ import PaymentConfirmationScreen from "./screens/PaymentConfirmationScreen";
 import NotificationScreen from "./screens/NotificationScreen";
 import AddWashServiceScreen from "./screens/CarWash/AddWashServiceScreen";
 import { ThemeContext } from "./context/ThemeContext";
-import ActivityScreen from '../AvtoMig/screens/CarWash/ActivityScreen';
 import OrdersScreen from "./screens/CarWash/OrdersScreen";
 import OrderDetailsScreen from "./screens/CarWash/OrderDetailsScreen";
 import UserSelectionScreen from "./screens/CarWash/UserSelectionScreen";
 import TransactionsScreen from "./screens/TransactionsScreen";
-SplashScreen.preventAutoHideAsync();
-
+import UserDetailScreen from "./screens/UserDetailScreen";
+import SalarySettingsScreen from "./screens/SalarySettingsScreen";
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -38,9 +36,7 @@ const App = () => {
   const [theme, setTheme] = useState({ mode: Appearance.getColorScheme() });
   const [isReady, setIsReady] = useState(false);
   const [statusBarStyle, setStatusBarStyle] = useState(STYLES[0]);
-  const [statusBarTransition, setStatusBarTransition] = useState(
-    TRANSITIONS[0],
-  );
+  const [statusBarTransition, setStatusBarTransition] = useState(TRANSITIONS[0]);
 
   const changeStatusBarVisibility = () => setHidden(!hidden);
   const updateTheme = async (newTheme) => {
@@ -89,7 +85,6 @@ const App = () => {
   }
 
   return (
-    
     <ThemeContext.Provider value={{ theme, setTheme, updateTheme }}>
       <StatusBar
         animated={true}
@@ -108,6 +103,16 @@ const App = () => {
           <Stack.Screen
             name="Login"
             component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SalarySettings"
+            component={SalarySettingsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="UserDetail"
+            component={UserDetailScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -136,16 +141,11 @@ const App = () => {
             options={{ headerShown: false }}
           />
           <Stack.Screen
-            name="Activity"
-            component={ActivityScreen}
-            options={{ headerShown: false }}
-          />
-           <Stack.Screen
             name="Notification"
             component={NotificationScreen}
             options={{ headerShown: false }}
           />
-           <Stack.Screen
+          <Stack.Screen
             name="PaymentConfirmation"
             component={PaymentConfirmationScreen}
             options={{ headerShown: false }}
@@ -195,7 +195,6 @@ const App = () => {
             component={CompletedWashOrdersScreen}
             options={{ headerShown: false }}
           />
-          
           <Stack.Screen
             name="ListOfWashOrders"
             component={ListOfWashOrdersScreen}

@@ -12,7 +12,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.phand1k.AvtoMig",
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {

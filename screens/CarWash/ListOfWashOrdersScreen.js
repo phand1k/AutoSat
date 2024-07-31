@@ -70,7 +70,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchDashboardData = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetInfoForWashorderList', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoForWashorderList', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -85,7 +85,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -115,7 +115,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       }
       console.log(`Fetching service details for washServiceId: ${washServiceId} with token: ${token}`);
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetDetailsWashService?id=${washServiceId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DetailsWashService?id=${washServiceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -171,7 +171,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/director/GetAllNotCompletedWashOrdersAsync', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/AllNotCompletedWashOrdersAsync', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -214,7 +214,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         const car = resolvedOrder.car || {};
         const modelCar = resolvedOrder.modelCar || {};
 
-        const sumResponse = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetSummOfWashServicesOnOrder?id=${resolvedOrder.id}`, {
+        const sumResponse = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Washorder/GetSummOfWashServicesOnOrder?id=${resolvedOrder.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -252,7 +252,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchServices = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllServices', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Service/GetAllServices', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -274,7 +274,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchAssignedServices = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetAllWashServicesOnOrderAsync?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/AllWashServicesOnOrderAsync?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -294,7 +294,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       console.log(`Fetching salary for serviceId: ${service.id}, userId: ${user.id}`);
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetSalaryUser?serviceId=${service.id}&aspNetUserId=${user.id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Salary/GetSalaryUser?serviceId=${service.id}&aspNetUserId=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -337,7 +337,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const createSalarySetting = async (serviceId, userId, salary) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/director/createsalarysetting', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Salary/createsalarysetting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -364,7 +364,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const completeWashOrder = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/director/CompleteWashOrder/?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/CompleteWashOrder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -388,7 +388,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const deleteWashOrder = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/director/deletewashorder/?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/deletewashorder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -410,7 +410,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const deleteWashServiceFromOrder = async (washServiceId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/DeleteWashServiceFromOrder?id=${washServiceId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DeleteWashServiceFromOrder?id=${washServiceId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -494,7 +494,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     setSelectedOrder(null);
     setSelectedService(null);
     setSelectedUser(null);
-    setRecentlyClosedOrder(selectedOrder.id);
+    setRecentlyClosedOrder(selectedOrder?.id || null);
   };
 
   const openConfirmationModal = () => {
@@ -526,7 +526,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       const price = parseFloat(editedPrice);
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/CreateWashService', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashService/CreateWashService', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -914,9 +914,6 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       {renderServiceDetailsModal()}
       {renderDashboardModal()}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color={activeColors.tint} />
-        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Машины на мойке</Text>
         <TouchableOpacity onPress={() => setDashboardModalVisible(true)} style={styles.infoButton}>
           <Ionicons name="download-outline" size={26} color='#1DA1F2' />

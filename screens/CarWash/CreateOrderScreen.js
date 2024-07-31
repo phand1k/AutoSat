@@ -121,7 +121,7 @@ const CreateOrderScreen = () => {
         phoneNumber: phoneNumber.replace(/[^\d]/g, '')
       };
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/director/createwashorder', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/createwashorder', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -43,7 +43,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/director/GetAllCompletedWashOrdersAsync', {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/AllCompletedWashOrdersAsync', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -108,7 +108,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   const fetchOrderDetails = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetDetailsWashOrder?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/DetailsWashOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -124,7 +124,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   const fetchPaymentInfo = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetInfoPaymentForWashOrder?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoPaymentForWashOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -147,7 +147,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   const fetchAssignedServices = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetAllWashServicesOnOrderAsync?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/AllWashServicesOnOrderAsync?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -163,7 +163,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   const fetchServiceDetails = async (washServiceId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Director/GetDetailsWashService?id=${washServiceId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DetailsWashService?id=${washServiceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -273,17 +273,20 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
             <StyledText style={styles.detailsText}>Модель: {orderDetails.modelCar.name}</StyledText>
             <StyledText style={styles.detailsText}>Гос номер: {orderDetails.carNumber}</StyledText>
             <StyledText style={styles.detailsText}>Создано: {formatDistanceToNow(parseISO(orderDetails.dateOfCreated), { locale: ru })} назад</StyledText>
+            <StyledText style={styles.detailsText}>Создал: {orderDetails.createdByFullName}</StyledText>
+            <StyledText style={styles.detailsText}>Завершил: {orderDetails.endedByFullName}</StyledText>
           </View>
           <View style={styles.detailsContainer}>
-            <StyledText style={styles.detailsTitle}>Информация о мастере</StyledText>
+            <StyledText style={styles.detailsTitle}>Информация о мойке</StyledText>
             <StyledText style={styles.detailsText}>Мастер: {orderDetails.aspNetUser.fullName}</StyledText>
-            <StyledText style={styles.detailsText}>Номер телефона: {orderDetails.phoneNumber}</StyledText>
+            <StyledText style={styles.detailsText}>Клиент: {orderDetails.phoneNumber}</StyledText>
           </View>
           {paymentInfo && (
             <View style={styles.detailsContainer}>
               <StyledText style={styles.detailsTitle}>Информация о платеже</StyledText>
-              <StyledText style={styles.detailsText}>Способ оплаты: {paymentInfo.paymentMethodId === 1 ? 'Наличный' : 'Безналичный'}</StyledText>
+              <StyledText style={styles.detailsText}>Способ оплаты: {paymentInfo.paymentMethod ? paymentInfo.paymentMethod.name : 'Неизвестно'}</StyledText>
               <StyledText style={styles.detailsText}>Сумма оплаты: {paymentInfo.summ} тг</StyledText>
+              <StyledText style={styles.detailsText}>К оплате: {paymentInfo.toPay} тг</StyledText>
             </View>
           )}
         </ScrollView>
@@ -292,6 +295,7 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
       )}
     </View>
   );
+  
 
   const renderAssignedServices = () => (
     <View style={styles.assignedServiceListContainer}>
@@ -310,7 +314,8 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
     <SafeAreaView style={[{ backgroundColor: activeColors.primary }, styles.container]}>
       {renderServiceDetailsModal()}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Завершенные заказ-наряды</Text>
+        <Ionicons name="arrow-back" size={24} color={activeColors.tint} onPress={() => navigation.goBack()} style={styles.backButton} />
+        <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Помытые машины</Text>
       </View>
       <TextInput
         style={[styles.searchBox, { backgroundColor: activeColors.primary, borderColor: activeColors.secondary, color: activeColors.tint }]}
