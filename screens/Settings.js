@@ -16,6 +16,7 @@ const SettingsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [password, setPassword] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   const toggleTheme = () => {
     updateTheme();
@@ -101,6 +102,30 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Authenticate/DeleteUser/?id=${userInfo.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        await handleLogout();
+        Alert.alert("Успех", "Аккаунт успешно удален.");
+      } else {
+        Alert.alert("Ошибка", "Не удалось удалить аккаунт.");
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert("Ошибка", "Произошла ошибка при удалении аккаунта.");
+    } finally {
+      setDeleteModalVisible(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
@@ -125,9 +150,14 @@ const SettingsScreen = ({ navigation }) => {
       >
         <View style={styles.header}>
           <StyledText style={{ color: activeColors.accent }} bold>Пользователь</StyledText>
-          <TouchableOpacity onPress={fetchData} style={styles.refreshButton}>
-            <Ionicons name="refresh" size={24} color={activeColors.accent} />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity onPress={fetchData} style={styles.refreshButton}>
+              <Ionicons name="refresh" size={24} color={activeColors.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setDeleteModalVisible(true)} style={styles.deleteButton}>
+              <Ionicons name="trash-outline" size={24} color="red" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {userInfo && (
@@ -199,6 +229,28 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalView, { backgroundColor: activeColors.primary }]}>
+            <StyledText style={[styles.modalTitle, { color: activeColors.text }]}>Удаление аккаунта</StyledText>
+            <StyledText style={[styles.modalMessage, { color: activeColors.text }]}>
+              Вы уверены, что хотите удалить аккаунт? Это действие необратимо.
+            </StyledText>
+            <TouchableOpacity onPress={handleDeleteAccount} style={[styles.confirmButton, { backgroundColor: activeColors.accent }]}>
+              <StyledText style={{ color: activeColors.primary, fontSize: 18 }}>Удалить</StyledText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setDeleteModalVisible(false)} style={[styles.cancelButton, { backgroundColor: activeColors.secondary }]}>
+              <StyledText style={{ color: activeColors.text, fontSize: 18 }}>Отмена</StyledText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -234,6 +286,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerButtons: {
+    flexDirection: 'row',
   },
   passwordSection: {
     marginTop: 25,
@@ -276,10 +331,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  modalMessage: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginVertical: 15,
+  },
   infoButton: {
     marginTop: 10,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  deleteButton: {
+    marginLeft: 10,
   },
 });
 

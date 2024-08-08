@@ -94,7 +94,7 @@ const IphoneSlider = ({ onComplete, onSwipeLeft, onSwipeRight }) => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Подтверждение завершения</Text>
             <Text style={styles.modalMessage}>
-              Вы уверены, что хотите завершить заказ-наряд? Если на заказ-наряде есть незавершенные услуги, то эти услуги завершатся и зарплата мастерам начислится автоматически.
+              Вы уверены, что хотите услугу? Убедитесь, что вы завершили услугу.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -126,7 +126,7 @@ const IphoneSlider = ({ onComplete, onSwipeLeft, onSwipeRight }) => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Подтверждение удаления</Text>
             <Text style={styles.modalMessage}>
-              Вы уверены, что хотите удалить заказ-наряд? Все назначенные услуги на заказ-наряд будут удалены и зарплата мастеров так же будет удалена.
+              Вы уверены, что хотите удалить услугу? При удалении услуги зарплата обнулится.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity

@@ -2,7 +2,7 @@
   "expo": {
     "name": "AvtoMig",
     "slug": "AvtoMig",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,13 +14,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.phand1k.AvtoMig",
-      "buildNumber": "4"
+      "buildNumber": "11"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.phand1k.AvtoMig"
     },
     "web": {
       "favicon": "./assets/favicon.png"

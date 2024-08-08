@@ -29,6 +29,8 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [isLoadingModal, setIsLoadingModal] = useState(false);
 
+  const [lastSelectedOrderId, setLastSelectedOrderId] = useState(null);
+
   const [index, setIndex] = useState(0);
   const [routes] = useState([
     { key: 'orderDetails', title: 'Подробности заказа' },
@@ -78,23 +80,34 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
         return obj;
       };
 
-      const orders = data.$values.map(order => {
+      const orders = await Promise.all(data.$values.map(async (order) => {
         const resolvedOrder = resolveReferences(order);
         const car = resolvedOrder.car || {};
         const modelCar = resolvedOrder.modelCar || {};
 
+        const sumResponse = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Washorder/GetSummOfWashServicesOnOrder?id=${resolvedOrder.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!sumResponse.ok) {
+          throw new Error(`HTTP error! status: ${sumResponse.status}`);
+        }
+        const sum = await sumResponse.json();
+
         return {
           id: resolvedOrder.id,
-          name: `Авто: ${car.name || 'Неизвестная марка машины'} ${modelCar.name || 'Неизвестная модель'}`,
+          name: `${car.name || 'Неизвестная марка машины'} ${modelCar.name || 'Неизвестная модель'}`,
           description: `${resolvedOrder.carNumber}`,
           brand: car.name || 'Неизвестно',
           model: modelCar.name || 'Неизвестно',
           licensePlate: resolvedOrder.carNumber,
           createdAt: resolvedOrder.dateOfCreated,
           timeAgo: formatDistanceToNow(parseISO(resolvedOrder.dateOfCreated), { locale: ru }),
-          imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg'
+          imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
+          totalServices: `${sum} ₸`
         };
-      });
+      }));
 
       setOrders(orders);
       setOriginalOrders(orders);
@@ -130,10 +143,10 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
         }
       });
 
-      const responseText = await response.text(); // Получаем ответ как текст
+      const responseText = await response.text();
 
-      if (responseText) { // Проверяем, что ответ не пустой
-        const data = JSON.parse(responseText); // Парсим текст в JSON
+      if (responseText) {
+        const data = JSON.parse(responseText);
         setPaymentInfo(data);
       } else {
         throw new Error('Response is empty');
@@ -197,8 +210,9 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
     setIsLoadingModal(true);
     setModalVisible(true);
     setSelectedOrder(order);
+    setLastSelectedOrderId(order.id);
     await fetchOrderDetails(order.id);
-    await fetchPaymentInfo(order.id); // Fetch payment info
+    await fetchPaymentInfo(order.id);
     await fetchAssignedServices(order.id);
     setIsLoadingModal(false);
     setIndex(0);
@@ -213,12 +227,19 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
   };
 
   const renderOrderItem = ({ item }) => (
-    <TouchableOpacity onPress={() => openModal(item)} style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
+    <TouchableOpacity
+      onPress={() => openModal(item)}
+      style={[
+        styles.itemContainer,
+        { backgroundColor: activeColors.secondary },
+        item.id === lastSelectedOrderId && styles.selectedItemContainer
+      ]}
+    >
       <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
       <View style={styles.orderDetails}>
         <StyledText style={styles.itemName}>{item.name}</StyledText>
         <StyledText style={styles.itemDescription}>{item.description}</StyledText>
-        <StyledText style={styles.itemInfo}>{item.brand} {item.model} ({item.licensePlate})</StyledText>
+        <StyledText style={styles.itemTotalServices}>{item.totalServices}</StyledText>
         <StyledText style={styles.itemTimeAgo}>Создано: {item.timeAgo} назад</StyledText>
       </View>
     </TouchableOpacity>
@@ -295,7 +316,6 @@ const CompletedWashOrdersScreen = ({ navigation }) => {
       )}
     </View>
   );
-  
 
   const renderAssignedServices = () => (
     <View style={styles.assignedServiceListContainer}>
@@ -441,21 +461,9 @@ const styles = StyleSheet.create({
   itemInfo: {
     fontSize: 12,
   },
-  progressBarContainer: {
-    width: 100,
-    height: 10,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 5,
-    marginVertical: 5,
-  },
-  progressBar: {
-    height: 10,
-    backgroundColor: '#007bff',
-    borderRadius: 5,
-  },
-  progressText: {
-    fontSize: 14,
-    color: '#ccc',
+  itemTotalServices: {
+    fontSize: 22,
+    color: '#007bff',
   },
   modalView: {
     flex: 1,
@@ -559,7 +567,11 @@ const styles = StyleSheet.create({
     color: '#aaa',
     textAlign: 'center',
     marginTop: 20,
-  }
+  },
+  selectedItemContainer: {
+    borderWidth: 0.5,
+    borderColor: 'blue',
+  },
 });
 
 export default CompletedWashOrdersScreen;

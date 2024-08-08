@@ -11,12 +11,14 @@ import { ru } from 'date-fns/locale';
 import moment from 'moment';
 import * as Linking from 'expo-linking';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 
 const initialLayout = { width: Dimensions.get('window').width };
 
 const ListOfWashOrdersScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
+  const route = useRoute();
 
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('');
@@ -60,12 +62,124 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    if (route.params?.refresh) {
+      fetchOrders(); // Обновление списка, если параметр refresh установлен
+    }
+  }, [route.params?.refresh]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchOrders(); // Вызов функции для обновления списка заказов
+    }, [])
+  );
+
+  const ws = useRef(null);
+
+  useEffect(() => {
+    setupWebSocket();
+    fetchOrders();
+    fetchServices();
+    fetchUsers();
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
+  }, []);
+
+  const setupWebSocket = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      if (!token) {
+        throw new Error('Authentication token is not available.');
+      }
+
+      ws.current = new WebSocket(`wss://avtosat-001-site1.ftempurl.com/ws?token=${token}`);
+
+      ws.current.onopen = () => {
+        console.log('WebSocket connection opened');
+      };
+
+      ws.current.onmessage = (e) => {
+        console.log('WebSocket message received:', e.data);
+        const message = JSON.parse(e.data);
+        handleWebSocketMessage(message);
+      };
+
+      ws.current.onerror = (e) => {
+        console.error('WebSocket error', e.message);
+      };
+
+      ws.current.onclose = (e) => {
+        console.log('WebSocket connection closed', e.code, e.reason);
+      };
+    } catch (error) {
+      console.error('Error setting up WebSocket:', error);
+      Alert.alert("Error", `Failed to set up WebSocket: ${error.message}`);
+    }
+  };
+
+  const handleWebSocketMessage = (message) => {
+    console.log('Received WebSocket message:', message);
+    switch (message.eventType) {
+      case "create":
+        const { id, carNumber, phoneNumber, dateOfCreated, name } = message.order;
+        const newOrder = {
+          id,
+          name: 'Неизвестная марка машины Неизвестная модель',
+          description: carNumber,
+          brand: 'Неизвестно',
+          model: 'Неизвестно',
+          licensePlate: carNumber,
+          timeAgo: formatDistanceToNow(parseISO(dateOfCreated), { locale: ru }),
+          progress: Math.floor(Math.random() * 100),
+          totalServices: `0 ₸`,
+          imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
+          services: [],
+          phoneNumber,
+          name
+        };
+        setOrders(prevOrders => [newOrder, ...prevOrders]);
+        setOriginalOrders(prevOrders => [newOrder, ...prevOrders]);
+        break;
+      case "serviceUpdated":
+        const { orderId, newTotalServices } = message;
+        setOrders(prevOrders =>
+          prevOrders.map(order =>
+            order.id === orderId
+              ? { ...order, totalServices: `${newTotalServices} ₸` }
+              : order
+          )
+        );
+        setOriginalOrders(prevOrders =>
+          prevOrders.map(order =>
+            order.id === orderId
+              ? { ...order, totalServices: `${newTotalServices} ₸` }
+              : order
+          )
+        );
+        break;
+      default:
+        console.warn(`Unhandled event type: ${message.eventType}`);
+    }
+  };
+
+  useEffect(() => {
     if (selectedUser && selectedService && !isFetchingSalary && !fetchedSalaryRef.current) {
       setIsFetchingSalary(true);
       fetchedSalaryRef.current = true;
       fetchSalary(selectedService, selectedUser);
     }
   }, [selectedUser, selectedService]);
+
+  useEffect(() => {
+    if (selectedService) {
+      const salaryPercentage = 0.4; // 40%
+      const calculatedSalary = (parseFloat(selectedService.price.replace(' ₸', '')) * salaryPercentage).toFixed(2);
+      setSalary(calculatedSalary); // Установить рассчитанную зарплату в поле
+    }
+  }, [selectedService]);
 
   const fetchDashboardData = async () => {
     try {
@@ -744,7 +858,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     - Общее количество заказов: ${dashboardData.countOfNotCompletedOrders}
     - Общее количество не завершенных услуг: ${dashboardData.countOfNotCompletedServices}
     - Общее количество завершенных услуг: ${dashboardData.countOfCompeltedServices}
-    - Общая сумма услуг: ${dashboardData.summOfAllServices} ₸;`;
+    - Общая сумма услуг: ${dashboardData.summOfAllServices} ₸`;
 
     const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     await Linking.openURL(url);
@@ -975,8 +1089,14 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
                   )}
                 />
                 <PaymentSlider
-                  onComplete={() => completeWashOrder(selectedOrder.id)}
-                  onSwipeLeft={() => deleteWashOrder(selectedOrder.id)}
+                  onComplete={() => {
+                    completeWashOrder(selectedOrder.id);
+                    closeModal(); // Закрыть модальное окно после завершения заказ-наряда
+                  }}
+                  onSwipeLeft={() => {
+                    deleteWashOrder(selectedOrder.id);
+                    closeModal(); // Закрыть модальное окно после удаления заказ-наряда
+                  }}
                   selectedOrder={selectedOrder}
                 />
                 <TouchableOpacity

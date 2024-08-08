@@ -17,8 +17,6 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [totalToPay, setTotalToPay] = useState(0);
 
-  const totalAmount = parseFloat(selectedOrder.totalServices.replace(' тг', '')) || 0;
-
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       try {
@@ -63,14 +61,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       onPanResponderRelease: (event, gestureState) => {
         if (gestureState.dx > 100) {
           setSliderActivated(true);
-          if (totalAmount <= 0) {
-            Alert.alert('Ошибка', 'Нельзя завершить заказ-наряд, если не назначены услуги');
-            resetSlider();
-          } else {
-            setTotalToPay(totalAmount);
-            setPaymentModalVisible(true);
-            console.log('Свайп вправо выполнен');
-          }
+          handleCompleteOrder();
         } else if (gestureState.dx < -100) {
           setSliderActivated(true);
           setDeleteConfirmationVisible(true);
@@ -83,6 +74,42 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       },
     })
   ).current;
+
+  const fetchOrderTotal = async (orderId) => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const sum = await response.json();
+      return sum;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  };
+
+  const handleCompleteOrder = async () => {
+    try {
+      const sum = await fetchOrderTotal(selectedOrder.id);
+      if (sum <= 0) {
+        Alert.alert('Ошибка', 'Нельзя завершить заказ-наряд, если не назначены услуги');
+        resetSlider();
+      } else {
+        setTotalToPay(sum);
+        setPaymentModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error fetching order total:', error);
+      Alert.alert('Ошибка', 'Произошла ошибка при получении суммы услуг');
+      resetSlider();
+    }
+  };
 
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
@@ -144,7 +171,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       ...prevAmounts,
       [method]: amount,
     }));
-    if (selectedPaymentMethod === 'Смешанная оплата' && parseFloat(amount) > totalAmount) {
+    if (selectedPaymentMethod === 'Смешанная оплата' && parseFloat(amount) > totalToPay) {
       setExceedsAmount(true);
     } else {
       setExceedsAmount(false);
@@ -153,7 +180,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
 
   const handleMixedPaymentValidation = () => {
     const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
-    if (cashAmount >= totalAmount) {
+    if (cashAmount >= totalToPay) {
       Alert.alert(
         'Предупреждение',
         'Сумма наличными превышает или равна общей сумме услуг. Вся сумма будет учтена как наличная оплата.'
@@ -166,7 +193,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const handleConfirmPayment = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     const paymentMethodId = paymentMethods.find((method) => method.name === selectedPaymentMethod)?.id;
-    const amount = parseFloat(paymentAmounts[selectedPaymentMethod]) || totalAmount;
+    const amount = parseFloat(paymentAmounts[selectedPaymentMethod]) || totalToPay;
 
     try {
       const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
@@ -183,17 +210,18 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to create transaction. HTTP status ${response.status}`);
+        throw new Error(`Ошибка при создании транзакции. Похоже, что заказ-наряд уже кто-то завершил 👀`);
+        closeModal();
       }
 
       await confirmCompletion();
 
-      Alert.alert('Успех', 'Транзакция успешно создана');
+      Alert.alert('Успешно', 'Транзакция успешно создана ✅');
       setPaymentModalVisible(false);
       handleRightSwipe();
     } catch (error) {
       console.error('Error creating transaction:', error);
-      Alert.alert('Error', `Failed to create transaction: ${error.message}`);
+      Alert.alert('Ошибка', ` ${error.message}`);
     }
   };
 
@@ -214,7 +242,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
             text: 'Подтвердить',
             onPress: () => {
               const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
-              const change = cashAmount - totalAmount;
+              const change = cashAmount - totalToPay;
               Alert.alert('Сдача', `Ваша сдача: ${change} тг`);
               setCashAmountScreenVisible(false);
               handleConfirmPayment();
@@ -356,7 +384,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
                       <Text style={styles.modalMessage}>Гос номер: {selectedOrder.licensePlate}</Text>
                       <Text style={styles.modalMessage}>Марка: {selectedOrder.brand} {selectedOrder.model}</Text>
                     </View>
-                    <Text style={styles.totalAmountText}>К оплате: {selectedOrder.totalServices}</Text>
+                    <Text style={styles.totalAmountText}>К оплате: {totalToPay} тг</Text>
                   </>
                 )}
                 <View style={styles.paymentMethodsContainer}>
@@ -383,7 +411,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
                       style={styles.payButton}
                       onPress={handleConfirmPayment}
                     >
-                      <Text style={styles.payButtonText}>Оплатить {selectedOrder.totalServices}</Text>
+                      <Text style={styles.payButtonText}>Оплатить {totalToPay} тг</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -409,7 +437,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
           <View style={styles.modalContainer}>
             <TouchableWithoutFeedback>
               <View style={styles.cashModalContent}>
-                <Text style={styles.modalTitleForPayment}>К оплате: {selectedOrder.totalServices}</Text>
+                <Text style={styles.modalTitleForPayment}>К оплате: {totalToPay} тг</Text>
                 <Text style={styles.modalTitle}>Введите сумму наличными</Text>
                 <TextInput
                   style={styles.cashInput}

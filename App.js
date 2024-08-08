@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Appearance, StatusBar, SafeAreaView, Modal, View, Text, TextInput, TouchableOpacity, Alert, AppState } from "react-native";
+import { Appearance, StatusBar, SafeAreaView, Modal, View, Button, Text, TouchableOpacity, Alert, AppState } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +27,7 @@ import UserSelectionScreen from "./screens/CarWash/UserSelectionScreen";
 import TransactionsScreen from "./screens/TransactionsScreen";
 import UserDetailScreen from "./screens/UserDetailScreen";
 import SalarySettingsScreen from "./screens/SalarySettingsScreen";
+
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -37,6 +38,7 @@ const App = () => {
   const [isReady, setIsReady] = useState(false);
   const [statusBarStyle, setStatusBarStyle] = useState(STYLES[0]);
   const [statusBarTransition, setStatusBarTransition] = useState(TRANSITIONS[0]);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const changeStatusBarVisibility = () => setHidden(!hidden);
   const updateTheme = async (newTheme) => {
@@ -78,6 +80,81 @@ const App = () => {
       console.log(notification);
     });
     return () => subscription.remove();
+  }, []);
+
+  const registerForPushNotificationsAsync = async () => {
+    let token;
+    const jwtToken = await AsyncStorage.getItem('access_token_avtosat');
+    if (!jwtToken) {
+      console.error('Authentication token is not available.');
+      return; // Прерываем процесс, если JWT токен отсутствует
+    }
+  
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      return;
+    }
+  
+    token = (await Notifications.getDevicePushTokenAsync()).data;
+    console.log("Push token " + token);
+  
+    try {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Token/RegisterToken', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: token }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to create token notification. HTTP status ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Произошла ошибка при регистрации токена');
+    }
+    return token;
+  };
+  
+
+  const checkAndShowModal = async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      setModalVisible(true);
+    }
+  };
+
+  useEffect(() => {
+    const sendTokenPeriodically = async () => {
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        console.log('Token sent to server');
+      }
+    };
+
+    // Initial check and token registration
+    sendTokenPeriodically();
+
+    // Interval to send token every 12 hours (43200000 milliseconds)
+    const intervalId = setInterval(sendTokenPeriodically, 43200000);
+
+    // Check notifications permissions and show modal if not granted
+    checkAndShowModal();
+
+    // Interval to show modal every 12 hours if permissions are not granted
+    const modalIntervalId = setInterval(checkAndShowModal, 43200000);
+
+    // Clean up intervals on component unmount
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(modalIntervalId);
+    };
   }, []);
 
   if (!isReady) {
@@ -202,6 +279,23 @@ const App = () => {
           />
         </Stack.Navigator>
       </NavigationContainer>
+
+      {/* Модальное окно */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View style={{ width: 300, padding: 20, backgroundColor: 'white', borderRadius: 10 }}>
+            <Text style={{ marginBottom: 20 }}>Включите уведомления для получения важных сообщений 🔔</Text>
+            <Button title="OK" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </ThemeContext.Provider>
   );
 };

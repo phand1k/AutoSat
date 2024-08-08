@@ -106,21 +106,21 @@ const CreateOrderScreen = () => {
       Alert.alert('Ошибка', 'Пожалуйста, заполните все поля.');
       return;
     }
-
+  
     try {
       setIsSubmitting(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
-
+  
       const payload = {
         carId: selectedBrand.id,
         modelCarId: selectedModel.id,
         carNumber: carNumber,
         phoneNumber: phoneNumber.replace(/[^\d]/g, '')
       };
-
+  
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/createwashorder', {
         method: 'POST',
         headers: {
@@ -129,7 +129,7 @@ const CreateOrderScreen = () => {
         },
         body: JSON.stringify(payload),
       });
-
+  
       if (!response.ok) {
         if (response.status === 400) {
           const errorData = await response.json();
@@ -137,22 +137,21 @@ const CreateOrderScreen = () => {
           Alert.alert('Ошибка', 'Машина с таким номером уже на мойке');
           return;
         }
-        if (response.status === 403)
-        {
+        if (response.status === 403) {
           Alert.alert('Истекла подписка', 'Истек срок действия подписки');
         }
         throw new Error(`Failed to create wash order. HTTP status ${response.status}`);
       }
-
+  
       setOrderCreated(true);
       setSelectedBrand(null);
       setSelectedModel(null);
       setCarNumber('');
       setPhoneNumber('');
       setStep(1);
-
+  
       Alert.alert('Успех', 'Заказ-наряд создан успешно!');
-      navigation.navigate('Мойка')
+      navigation.navigate('Мойка', { refresh: true });
     } catch (error) {
       console.error('Error creating wash order:', error);
     } finally {
@@ -285,6 +284,28 @@ const CreateOrderScreen = () => {
         <View style={[styles.step, step >= 3 && styles.activeStep, { backgroundColor: activeColors.accent }]} />
         <View style={[styles.step, step >= 4 && styles.activeStep, { backgroundColor: activeColors.accent }]} />
       </View>
+      <View style={[styles.selectionInfo, { backgroundColor: activeColors.secondary }]}>
+        {selectedBrand && (
+          <Text style={[styles.selectionText, { color: activeColors.tint }]}>
+            Марка: {selectedBrand.name}
+          </Text>
+        )}
+        {selectedModel && (
+          <Text style={[styles.selectionText, { color: activeColors.tint }]}>
+            Модель: {selectedModel.name}
+          </Text>
+        )}
+        {carNumber && (
+          <Text style={[styles.selectionText, { color: activeColors.tint }]}>
+            Гос. номер: {carNumber}
+          </Text>
+        )}
+        {phoneNumber && (
+          <Text style={[styles.selectionText, { color: activeColors.tint }]}>
+            Телефон: {phoneNumber}
+          </Text>
+        )}
+      </View>
       {selectedModel === null && (
         <TextInput
           style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
@@ -341,6 +362,7 @@ const CreateOrderScreen = () => {
             keyboardType="numeric"
             placeholder="Номер телефона клиента"
             placeholderTextColor={activeColors.tint}
+            maxLength={18}
             clearButtonMode="while-editing"
           />
           <TouchableOpacity style={[styles.button, { backgroundColor: activeColors.accent }]} onPress={createWashOrder} disabled={isSubmitting}>
@@ -406,7 +428,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   searchBox: {
-    fontSize: 18,
+    fontSize: 20,
     padding: 10,
     borderWidth: 1,
     borderRadius: 8,
@@ -477,6 +499,20 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
+  },
+  selectionInfo: {
+    padding: 0.000001,
+    margin: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  selectionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

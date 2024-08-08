@@ -155,9 +155,9 @@ const LoginScreen = ({ navigation }) => {
       <SafeAreaView style={{ backgroundColor: activeColors.primary, flex: 1, justifyContent: 'center' }}>
         <View style={{ paddingHorizontal: 25 }}>
           <View style={{ alignItems: 'center' }}>
-            <Image source={require('../images/login.png')} style={{ height: 200, width: 300, transform: [{ rotate: '-5deg' }] }} />
+            <Image source={require('../images/login-wash.png')} style={{ height: 200, width: 300, transform: [{ rotate: '-deg' }] }} />
           </View>
-          <Text style={{ fontSize: 28, fontWeight: '500', color: activeColors.tint, marginBottom: 30 }}>Avto Sat</Text>
+          <Text style={{ fontSize: 28, fontWeight: '500', color: activeColors.tint, marginBottom: 30 }}>AutoSat</Text>
           <TextInputMask
             type={'custom'}
             options={{ mask: '+7 (999) 999-99-99' }}
