@@ -14,12 +14,15 @@ const CartScreen = () => {
   const navigation = useNavigation();
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
-
+  const [userRole, setUserRole] = useState(null); // Состояние для роли пользователя
   const [index, setIndex] = useState(0);
   const [routes] = useState([
     { key: 'services', title: 'Список услуг' },
     { key: 'users', title: 'Пользователи' },
   ]);
+  const [selectedService, setSelectedService] = useState(null); // Выбранная услуга для изменения цены
+const [newPriceModalVisible, setNewPriceModalVisible] = useState(false); // Модальное окно для изменения цены
+const [newPrice, setNewPrice] = useState(''); // Новая цена
 
   const [services, setServices] = useState([]);
   const [filter, setFilter] = useState('');
@@ -38,12 +41,27 @@ const CartScreen = () => {
   const [selectedRole, setSelectedRole] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const ws = useRef(null);
-
+  const openPriceModal = (service) => {
+    setSelectedService(service); // Устанавливаем выбранную услугу
+    setNewPrice(service.price.toString()); // Устанавливаем текущую цену услуги
+    setNewPriceModalVisible(true); // Показываем модальное окно для изменения цены
+  };
+  
+  const getInitialLetters = (brand) => {
+    return brand && brand.length >= 3 ? brand.substring(0, 1).toUpperCase() : brand.toUpperCase();
+  };
+  
   useEffect(() => {
     fetchServices();
     fetchUsers();
     fetchRoles();
     setupWebSocket();
+    const fetchUserRole = async () => {
+      const role = await AsyncStorage.getItem('role_user_avtosat');
+      setUserRole(role);
+  };
+
+  fetchUserRole();
 
     return () => {
       if (ws.current) {
@@ -287,36 +305,66 @@ const CartScreen = () => {
       setUsers(filteredData);
     }
   };
-
+  const handleChangePrice = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      if (!token) {
+        throw new Error('Токен аутентификации недоступен.');
+      }
+  
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Service/ChangePrice?serviceId=${selectedService.id}&newPrice=${newPrice}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Не удалось сменить цену. HTTP статус: ${response.status}`);
+      }
+  
+      Alert.alert('Изменено!', 'Цена была успешно изменена🤑');
+      setNewPriceModalVisible(false); // Закрыть модальное окно
+      fetchServices(); // Обновить список услуг
+    } catch (error) {
+      console.error('Ошибка при смене цены:', error);
+      Alert.alert('Ошибка', `Не удалось сменить цену: ${error.message}`);
+    }
+  };
+  
   const handleCreateService = async () => {
     if (!serviceName || !price) {
       setError('Все поля должны быть заполнены');
       return;
     }
-    if (isNaN(price)) {
-      setError('Цена должна быть числом');
+    
+    // Проверка, является ли введённая цена числом и больше ли она нуля
+    if (isNaN(price) || parseFloat(price) <= 0) {
+      setError('Цена должна быть положительным числом');
       return;
     }
-
+  
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
-
+  
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/service/CreateService', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        // Используем проверенное значение с корректной ценой
         body: JSON.stringify({ name: serviceName, price: parseFloat(price) }),
       });
+  
       if (!response.ok) {
         throw new Error(`Failed to create service. HTTP status ${response.status}`);
       }
-
+  
       Alert.alert("Success", "Услуга успешно создана");
       setModalVisible(false);
       setServiceName('');
@@ -329,19 +377,27 @@ const CartScreen = () => {
       setLoading(false);
     }
   };
+  
 
   const renderServiceItem = ({ item }) => (
-    <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
-      <Image source={{ uri: 'https://www.freeiconspng.com/thumbs/services-icon-png/developer-services-icon-21.png' }} style={styles.itemImage} />
+    <TouchableOpacity onPress={() => openPriceModal(item)} style={styles.addIconContainer}>
+       <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
+      <View style={styles.brandContainer}>
+        <Text style={styles.brandText}>{getInitialLetters(item.name)}</Text>
+      </View>
       <View style={styles.orderDetails}>
         <StyledText style={styles.itemName}>{item.name}</StyledText>
         <StyledText style={styles.itemDescription}>{item.description}</StyledText>
-        <StyledText style={styles.itemPrice}>{item.price}₸</StyledText>
+        <StyledText style={styles.itemPrice}>{item.price}тенге</StyledText>
       </View>
-      <TouchableOpacity onPress={() => handleConfirmDeleteService(item.id)} style={styles.addIconContainer}>
+      {userRole !== 'Мастер' && (
+        <TouchableOpacity onPress={() => handleConfirmDeleteService(item.id)} style={styles.addIconContainer}>
         <Ionicons name="trash-outline" size={30} color="red" />
       </TouchableOpacity>
+            )}
+      
     </View>
+    </TouchableOpacity>
   );
 
   const renderUserItem = ({ item }) => (
@@ -352,12 +408,15 @@ const CartScreen = () => {
           <StyledText style={styles.itemDescription}>Роль: {item.roles.$values.join(', ') || 'Нет роли'}</StyledText>
           <StyledText style={styles.itemPhoneNumber}>Телефон: {item.phoneNumber || 'Не указан'}</StyledText>
         </View>
-        <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
+        {userRole !== 'Мастер' && (
+          <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
           <Ionicons name="trash-outline" size={30} color="red" />
         </TouchableOpacity>
+            )}
+        
         <TouchableOpacity onPress={() => { 
           setSelectedUser(item); 
-          setSelectedRole(item.roles.$values[0] || ''); 
+          setSelectedRole(item.roles.$values[0] || '');
           setUserModalVisible(true); 
         }} style={styles.addIconContainer}>
           <Ionicons name="create-outline" size={30} color="blue" />
@@ -469,6 +528,42 @@ const CartScreen = () => {
           />
         )}
       />
+      <Modal
+  visible={newPriceModalVisible}
+  transparent={true}
+  animationType="slide"
+  onRequestClose={() => setNewPriceModalVisible(false)}
+>
+  
+  <SafeAreaView style={styles.modalBackdrop}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={[styles.modalContainer, { backgroundColor: activeColors.primary }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.modalTitle}>Изменить цену</Text>
+          <TouchableOpacity onPress={() => setNewPriceModalVisible(false)}>
+            <Ionicons name="close" size={24} color={activeColors.tint} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.modalText}>Услуга: {selectedService?.name}</Text>
+        <TextInput
+          style={[styles.modalInput, { borderColor: activeColors.secondary, color: activeColors.tint }]}
+          value={newPrice}
+          onChangeText={setNewPrice}
+          keyboardType="numeric"
+          placeholder="Новая цена"
+          placeholderTextColor="#aaaaaa"
+        />
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: activeColors.accent }]}
+          onPress={handleChangePrice}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Сохранить</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableWithoutFeedback>
+  </SafeAreaView>
+
+</Modal>
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -616,6 +711,20 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 14,
     color: '#007bff',
+  },
+  brandContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#1DA1F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  brandText: {
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   addIconContainer: {
     justifyContent: 'center',

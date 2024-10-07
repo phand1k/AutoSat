@@ -1,9 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, Animated, PanResponder, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Animated, PanResponder, ActivityIndicator, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
-const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
+const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
   const sliderWidth = useRef(new Animated.Value(0)).current;
   const [sliderActivated, setSliderActivated] = useState(false);
   const [confirmationVisible, setConfirmationVisible] = useState(false);
@@ -16,7 +18,8 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const [exceedsAmount, setExceedsAmount] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [totalToPay, setTotalToPay] = useState(0);
-
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const navigation = useNavigation();
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       try {
@@ -78,7 +81,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -114,7 +117,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -127,8 +130,9 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       }
 
       onComplete();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Завершено✅', 'Заказ-наряд успешно завершен');
-      resetSlider();
+      navigation.navigate('Заказы', { refresh: true });
     } catch (error) {
       console.error('Error completing order:', error);
       Alert.alert('Error', `Failed to complete order: ${error.message}`);
@@ -160,26 +164,35 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
 
   const togglePaymentMethod = (method) => {
     setSelectedPaymentMethod(method);
-    if (method === 'Наличный' || method === 'Смешанная оплата') {
+    if (method === 'Наличный') {
+      setPaymentModalVisible(false);
+      setCashAmountScreenVisible(true);
+    } else if (method === 'Смешанная оплата') {
       setPaymentModalVisible(false);
       setCashAmountScreenVisible(true);
     }
   };
 
   const handleAmountChange = (method, amount) => {
+    const parsedAmount = parseFloat(amount) || 0;  // Парсим введённое значение в число
+  
     setPaymentAmounts((prevAmounts) => ({
       ...prevAmounts,
-      [method]: amount,
+      [method]: parsedAmount,  // Используем парсенное значение
     }));
-    if (selectedPaymentMethod === 'Смешанная оплата' && parseFloat(amount) > totalToPay) {
-      setExceedsAmount(true);
-    } else {
-      setExceedsAmount(false);
+  
+    // Проверяем, превышает ли сумма наличных общую сумму для смешанной оплаты
+    if (selectedPaymentMethod === 'Смешанная оплата') {
+      if (parsedAmount >= totalToPay) {
+        setExceedsAmount(true);
+      } else {
+        setExceedsAmount(false);
+      }
     }
   };
 
   const handleMixedPaymentValidation = () => {
-    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
+    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;  // Парсим сумму наличными
     if (cashAmount >= totalToPay) {
       Alert.alert(
         'Предупреждение',
@@ -191,71 +204,94 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   };
 
   const handleConfirmPayment = async () => {
+    if (isPaymentProcessing) {
+      return; // предотвращаем множественные нажатия
+    }
+  
+    setIsPaymentProcessing(true); // начинаем загрузку
+  
     const token = await AsyncStorage.getItem('access_token_avtosat');
     const paymentMethodId = paymentMethods.find((method) => method.name === selectedPaymentMethod)?.id;
-    const amount = parseFloat(paymentAmounts[selectedPaymentMethod]) || totalToPay;
-
+  
+    // Логика для обработки суммы наличных
+    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;  // Парсим сумму наличными
+    const totalSum = totalToPay;  // Общая сумма услуг
+  
+    // Формируем тело запроса
+    let body = {
+      paymentMethodId,
+      summ: totalSum,  // Всегда передаем общую сумму услуг
+      toPay: cashAmount,  // Сумма, введенная наличными
+    };
+  
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateDetailingTransaction?detailingOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          paymentMethodId,
-          summ: amount,
-          topay: totalToPay,
-        }),
+        body: JSON.stringify(body),  // Отправляем тело запроса
       });
-
+  
       if (!response.ok) {
-        throw new Error(`Ошибка при создании транзакции. Похоже, что заказ-наряд уже кто-то завершил 👀`);
-        closeModal();
+        // Проверка на ошибки с подробной информацией
+        const errorData = await response.json();
+        throw new Error(`Ошибка при создании транзакции: ${errorData.message || 'Неизвестная ошибка'}`);
       }
-
+  
       await confirmCompletion();
-
       Alert.alert('Создано✅', 'Транзакция успешно создана');
       setPaymentModalVisible(false);
       handleRightSwipe();
     } catch (error) {
       console.error('Error creating transaction:', error);
-      Alert.alert('Ошибка', ` ${error.message}`);
+      Alert.alert('Ошибка', `Произошла ошибка: ${error.message}`);
+    } finally {
+      setIsPaymentProcessing(false); // Заканчиваем загрузку
     }
   };
+  
 
   const handleCashAmountConfirm = async () => {
-    if (selectedPaymentMethod === 'Смешанная оплата' && exceedsAmount) {
-      Alert.alert(
-        'Предупреждение',
-        'Сумма наличными превышает общую сумму услуг. Вы уверены?',
-        [
-          {
-            text: 'Отмена',
-            onPress: () => {
-              resetSlider();
+    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
+  
+    try {
+      if (selectedPaymentMethod === 'Наличный' && cashAmount < totalToPay) {
+        throw new Error('Сумма наличными не может быть меньше общей суммы услуг.');
+      }
+  
+      if (selectedPaymentMethod === 'Смешанная оплата' && exceedsAmount) {
+        // Вызов диалогового окна с подтверждением
+        Alert.alert(
+          'Предупреждение',
+          'Сумма наличными превышает общую сумму услуг. Вся сумма будет учтена как наличная оплата. Вы уверены?',
+          [
+            {
+              text: 'Отмена',
+              onPress: () => {
+                resetSlider();
+              },
+              style: 'cancel',
             },
-            style: 'cancel',
-          },
-          {
-            text: 'Подтвердить',
-            onPress: () => {
-              const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
-              const change = cashAmount - totalToPay;
-              Alert.alert('Сдача', `Ваша сдача: ${change} тг`);
-              setCashAmountScreenVisible(false);
-              handleConfirmPayment();
+            {
+              text: 'Подтвердить',
+              onPress: () => {
+                setExceedsAmount(false);
+                handleConfirmPayment();
+              },
             },
-          },
-        ],
-        { cancelable: false }
-      );
-    } else {
-      setCashAmountScreenVisible(false);
-      handleConfirmPayment();
+          ],
+          { cancelable: false }
+        );
+      } else {
+        handleConfirmPayment();
+      }
+    } catch (error) {
+      Alert.alert('Ошибка', error.message);
     }
   };
+  
 
   const closeModal = () => {
     setConfirmationVisible(false);
@@ -281,92 +317,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
         <Text style={styles.thumbText}>→</Text>
       </Animated.View>
 
-      <Modal
-        transparent={true}
-        visible={confirmationVisible}
-        onRequestClose={closeModal}
-        animationType="slide"
-      >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <View style={styles.modalContainer}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Подтверждение завершения</Text>
-                <Text style={styles.modalMessage}>
-                  Вы уверены, что хотите завершить заказ-наряд? Если на заказ-наряде есть незавершенные услуги, то эти услуги завершатся и зарплата мастерам начислится автоматически.
-                </Text>
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.modalButton}
-                    onPress={() => {
-                      setConfirmationVisible(false);
-                      confirmCompletion();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Да</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={closeModal}
-                  >
-                    <Text style={styles.buttonText}>Нет</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                >
-                  <Text style={styles.closeButtonText}>Отмена</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
-      <Modal
-        transparent={true}
-        visible={deleteConfirmationVisible}
-        onRequestClose={closeModal}
-        animationType="slide"
-      >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <View style={styles.modalContainer}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Подтверждение удаления</Text>
-                <Text style={styles.modalMessage}>
-                  Вы уверены, что хотите удалить заказ-наряд? Все назначенные услуги на заказ-наряд будут удалены и зарплата мастеров так же будет удалена.
-                </Text>
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={styles.modalButton}
-                    onPress={() => {
-                      setDeleteConfirmationVisible(false);
-                      confirmDeletion();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Да</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={closeModal}
-                  >
-                    <Text style={styles.buttonText}>Нет</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                >
-                  <Text style={styles.closeButtonText}>Отмена</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-
+      {/* Modal for Payment Methods */}
       <Modal
         transparent={true}
         visible={paymentModalVisible}
@@ -377,13 +328,14 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
           <View style={styles.modalContainer}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
+                {/* Close Button in the top-right corner */}
+                <TouchableOpacity onPress={closeModal} style={styles.closeIconContainer}>
+                  <Ionicons name="close" size={30} color="#007aff" />
+                </TouchableOpacity>
+
                 <Text style={styles.modalTitle}>Выбор способа оплаты</Text>
                 {selectedOrder && (
                   <>
-                    <View style={styles.orderInfo}>
-                      <Text style={styles.modalMessage}>Гос номер: {selectedOrder.licensePlate}</Text>
-                      <Text style={styles.modalMessage}>Марка: {selectedOrder.brand} {selectedOrder.model}</Text>
-                    </View>
                     <Text style={styles.totalAmountText}>К оплате: {totalToPay} тг</Text>
                   </>
                 )}
@@ -410,23 +362,23 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
                     <TouchableOpacity
                       style={styles.payButton}
                       onPress={handleConfirmPayment}
+                      disabled={isPaymentProcessing} // блокируем кнопку, пока идет запрос
                     >
-                      <Text style={styles.payButtonText}>Оплатить {totalToPay} тг</Text>
+                      {isPaymentProcessing ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.payButtonText}>Оплатить {totalToPay} тг</Text>
+                      )}
                     </TouchableOpacity>
                   </>
                 )}
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                >
-                  <Text style={styles.closeButtonText}>Отмена</Text>
-                </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Modal for Cash Amount Entry */}
       <Modal
         transparent={true}
         visible={cashAmountScreenVisible}
@@ -436,31 +388,25 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
         <TouchableWithoutFeedback onPress={closeModal}>
           <View style={styles.modalContainer}>
             <TouchableWithoutFeedback>
-              <View style={styles.cashModalContent}>
-                <Text style={styles.modalTitleForPayment}>К оплате: {totalToPay} тг</Text>
+              <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Введите сумму наличными</Text>
                 <TextInput
-                  style={styles.cashInput}
+                  style={styles.inputLarge}  // Изменён стиль для больших цифр
+                  placeholder="Введите сумму наличными"
                   keyboardType="numeric"
-                  onChangeText={(amount) => handleAmountChange('Наличный', amount)}
-                  value={paymentAmounts['Наличный'] || ''}
+                  value={paymentAmounts['Наличный']}
+                  onChangeText={(value) => handleAmountChange('Наличный', value)}
                 />
                 {selectedPaymentMethod === 'Смешанная оплата' && (
-                  <Text style={styles.modalMessage}>
-                    Остальная сумма будет оплачена безналичным способом.
+                  <Text style={styles.infoText}>
+                    Остальная сумма будет списана как безналичная.
                   </Text>
                 )}
                 <TouchableOpacity
-                  style={styles.payButton}
+                  style={styles.confirmButton}
                   onPress={handleCashAmountConfirm}
                 >
-                  <Text style={styles.payButtonText}>Подтвердить {paymentAmounts['Наличный']} тг</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                >
-                  <Text style={styles.closeButtonText}>Отмена</Text>
+                  <Text style={styles.confirmButtonText}>Подтвердить</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -519,36 +465,16 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
-  cashModalContent: {
-    width: '90%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
+  closeIconContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 10,
-  },
-  modalTitleForPayment: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  modalMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 20,
-  },
-  modalComment: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#999',
-    marginBottom: 20,
   },
   orderInfo: {
     width: '100%',
@@ -596,17 +522,6 @@ const styles = StyleSheet.create({
   paymentMethodTextSelected: {
     color: '#fff',
   },
-  cashInput: {
-    width: '100%',
-    height: 60,
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    borderColor: '#007aff',
-    fontSize: 30,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
   payButton: {
     width: '100%',
     padding: 15,
@@ -618,38 +533,44 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  input: {
     width: '100%',
-    marginTop: 10,
+    height: 40,
+    borderColor: '#007aff',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  modalButton: {
-    flex: 1,
-    padding: 12,
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  confirmButton: {
+    width: '100%',
+    padding: 15,
     backgroundColor: '#007aff',
     borderRadius: 5,
     alignItems: 'center',
-    marginHorizontal: 5,
   },
-  cancelButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  buttonText: {
+  confirmButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
   },
-  closeButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: '#007aff',
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
+  inputLarge: {
+    width: '100%',
+    height: 60,  // Увеличиваем высоту поля ввода
+    fontSize: 30,  // Увеличиваем шрифт для отображения крупных цифр
+    borderColor: '#007aff',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    textAlign: 'center',
+  }
 });
 
-export default PaymentSlider;
+export default DetailingPaymentSlider;

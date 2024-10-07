@@ -124,7 +124,7 @@ const TransactionsScreen = ({ navigation }) => {
         <View style={styles.transactionDetails}>
           <Text style={[styles.transactionText, { color: activeColors.text }]}>Номер транзакции: {item.id}</Text>
           <Text style={[styles.transactionText, { color: activeColors.text }]}>Способ оплаты: {item.paymentMethod ? item.paymentMethod.name : 'Неизвестно'}</Text>
-          <Text style={[styles.transactionText, { color: activeColors.text }]}>Сумма: {item.summ} ₸</Text>
+          <Text style={[styles.transactionText, { color: activeColors.text }]}>Сумма: {item.summ} тенге</Text>
           <Text style={[styles.transactionText, { color: activeColors.text }]}>Дата: {formattedDate}</Text>
         </View>
       </View>
@@ -148,9 +148,9 @@ const TransactionsScreen = ({ navigation }) => {
         <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Оплаты</Text>
       </View>
       <View style={styles.summaryContainer}>
-        <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} ₸</Text>
-        <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} ₸</Text>
-        <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} ₸</Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} тенге</Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} тенге</Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} тенге</Text>
         {dateRange && <Text style={[styles.summaryText, { color: activeColors.text }]}>Выбранный период: {dateRange}</Text>}
       </View>
       <Button title="Выбрать даты" onPress={() => setPickerVisible(true)} />

@@ -194,8 +194,8 @@ const SalarySettingsScreen = ({ navigation }) => {
       <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/5534/5534747.png' }} style={styles.itemImage} />
       <View style={styles.orderDetails}>
         <StyledText style={styles.itemDescription}>Услуга: {item.serviceName}</StyledText>
-        <StyledText style={styles.itemDescription}>Цена услуги: {item.servicePrice}₸</StyledText>
-        <StyledText style={styles.itemInfo}>Зарплата с услуги: {item.salary}₸</StyledText>
+        <StyledText style={styles.itemDescription}>Цена услуги: {item.servicePrice}тенге</StyledText>
+        <StyledText style={styles.itemInfo}>Зарплата с услуги: {item.salary}тенге</StyledText>
         <StyledText style={styles.itemName}>Работник: {item.userFullName}</StyledText>
       </View>
     </TouchableOpacity>
@@ -240,7 +240,7 @@ const SalarySettingsScreen = ({ navigation }) => {
             <View style={[styles.modalView, { backgroundColor: activeColors.primary }]}>
               <StyledText style={styles.modalTitle}>Подробности о зарплате</StyledText>
               <StyledText style={styles.modalSubtitle}>Услуга: {selectedSalarySetting.serviceName}</StyledText>
-              <StyledText style={styles.modalSubtitle}>Цена услуги: {selectedSalarySetting.servicePrice}₸</StyledText>
+              <StyledText style={styles.modalSubtitle}>Цена услуги: {selectedSalarySetting.servicePrice}тенге</StyledText>
               <StyledText style={styles.modalSubtitle}>Работник: {selectedSalarySetting.userFullName}</StyledText>
               <TextInput
                 style={[styles.salaryInput, { backgroundColor: activeColors.secondary, borderColor: activeColors.accent, color: activeColors.tint }]}

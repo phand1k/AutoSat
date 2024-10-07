@@ -1,5 +1,18 @@
 import React, { useContext, useState, useEffect } from "react";
-import { View, ScrollView, RefreshControl, TouchableOpacity, StyleSheet, Text, Appearance, Switch, Alert, Linking } from "react-native";
+import {
+  View,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  StyleSheet,
+  Text,
+  Appearance,
+  Switch,
+  Alert,
+  Linking,
+  Modal,
+  Clipboard
+} from "react-native";
 import { colors } from "../config/theme";
 import { ThemeContext } from "../context/ThemeContext";
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +27,8 @@ const HomeScreens = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(theme.mode === "dark");
   const [userRole, setUserRole] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inviteLink, setInviteLink] = useState(null);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -42,16 +57,83 @@ const HomeScreens = () => {
     setRefreshing(false);
   };
 
+  const handleInvitePress = async () => {
+    try {
+      const jwtToken = await AsyncStorage.getItem('access_token_avtosat');
+      if (!jwtToken) {
+        Alert.alert("Ошибка", "Токен аутентификации отсутствует.");
+        return;
+      }
+
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Authenticate/InviteUser', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при получении ссылки приглашения');
+      }
+
+      const inviteLink = await response.text();
+      setInviteLink(inviteLink);
+      setModalVisible(true);
+
+    } catch (error) {
+      Alert.alert("Ошибка", "Не удалось получить ссылку приглашения");
+    }
+  };
+
+  const copyToClipboard = () => {
+    Clipboard.setString(inviteLink);
+    Alert.alert("Скопировано", "Ссылка приглашения скопирована в буфер обмена");
+  };
+
+  const handleMenuItemPress = async (item) => {
+    if (item.soon) {
+      Alert.alert("В работе🔥", "Этот раздел будет доступен в скором времени");
+      return;
+    }
+
+    if (item.title === "Пригласить") {
+      handleInvitePress();
+    } else if (item.title === "Заказы") {
+      try {
+        const organizationType = await AsyncStorage.getItem('typeOfOrganization_avtosat');
+        if (organizationType === "Car wash") {
+          navigation.navigate("Мойка", { userRole });
+        } else if (organizationType === "Detailing") {
+          navigation.navigate("Заказы", { userRole });
+        } else {
+          Alert.alert("Ошибка", "Тип организации не определен.");
+        }
+      } catch (error) {
+        Alert.alert("Ошибка", "Не удалось получить тип организации.");
+      }
+    } else if (item.title === "Сотрудники") {
+      navigation.navigate("SalarySettings", { userRole });
+    } else if (item.title === "Веб-версия") {
+      Linking.openURL('https://autosat.kz');
+    } else if (item.title === "Остатки") {
+      navigation.navigate("InventoryBalances");
+    } else if (item.title === "Услуги") {
+      navigation.navigate("Список");
+    }
+  };
+  
+
   const allMenuItems = [
-    { title: "Задачи", icon: "checkbox-outline", roles: ["Мастер"] },
-    { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Менеджер", "Директор", "Мастер"] },
-    { title: "Платежи", icon: "cash-outline", roles: ["Директор"] },
-    { title: "Продажи", icon: "cart-outline", roles: ["Менеджер", "Директор"], soon: true },
-    { title: "Сотрудники", icon: "people-outline", roles: ["Менеджер", "Директор"] },
-    { title: "Остатки", icon: "layers-outline", roles: ["Директор"], soon: true},
-    { title: "Услуги", icon: "briefcase-outline", roles: ["Менеджер", "Директор", "Мастер"] },
-    { title: "Веб-версия", icon: "logo-chrome", roles: ["Менеджер", "Директор", "Мастер"], soon: true },
-    { title: "Пригласить", icon: "pulse-outline", roles: ["Мастер", "Директор"] }
+    { title: "Остатки", icon: "checkbox-outline", roles: ["Мастер", "Директор", "Администратор"], soon: true },
+    { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Администратор", "Директор", "Мастер"] },
+    { title: "Мои задачи", icon: "newspaper-outline", roles: ["Директор", "Администратор", "Мастер"], soon: true },
+    { title: "Продажи", icon: "cart-outline", roles: ["Администратор", "Директор"], soon: true },
+    { title: "Сотрудники", icon: "people-outline", roles: ["Администратор", "Директор"] },
+    { title: "Лояльность", icon: "layers-outline", roles: ["Директор"], soon: true},
+    { title: "Услуги", icon: "briefcase-outline", roles: ["Администратор", "Директор", "Мастер"] },
+    { title: "Веб-версия", icon: "logo-chrome", roles: ["Администратор", "Директор", "Мастер"], soon: true },
+    { title: "Пригласить", icon: "pulse-outline", roles: ["Мастер", "Директор", "Администратор"] }
   ];
 
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
@@ -60,25 +142,6 @@ const HomeScreens = () => {
     0: { scale: 1 },
     0.5: { scale: 1.2 },
     1: { scale: 1 },
-  };
-
-  const handleMenuItemPress = (title) => {
-    if (title === "Пригласить") {
-      navigation.navigate("InviteUser", { userRole });
-    } else if (title === "Заказы") {
-      navigation.navigate("Мойка", { userRole });
-    } else if (title === "Задачи") {
-      navigation.navigate("Мои заказ-наряды", { userRole });
-    } else if (title === "Сотрудники") {
-      navigation.navigate("SalarySettings", { userRole });
-    } else if (title === "Веб-версия") {
-      Linking.openURL('https://autosat.kz');
-    } else if (title === "Платежи") {
-      navigation.navigate("Transactions");
-    }
-    else if (title === "Услуги") {
-      navigation.navigate("Список");
-    }
   };
 
   return (
@@ -117,7 +180,7 @@ const HomeScreens = () => {
         </View>
         <View style={styles.menuContainer}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={[styles.menuItem, { backgroundColor: activeColors.menuItem }]} onPress={() => handleMenuItemPress(item.title)}>
+            <TouchableOpacity key={index} style={[styles.menuItem, { backgroundColor: activeColors.menuItem }]} onPress={() => handleMenuItemPress(item)}>
               <Animatable.View
                 animation={animation}
                 iterationCount="infinite"
@@ -132,7 +195,27 @@ const HomeScreens = () => {
           ))}
         </View>
       </View>
-      <Text style={[styles.versionText, { color: activeColors.accent }]}>Версия 2.30.2</Text>
+      <Text style={[styles.versionText, { color: activeColors.accent }]}>Версия 7.0.0</Text>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Ссылка приглашения</Text>
+            <Text style={styles.modalText}>{inviteLink}</Text>
+            <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
+              <Text style={styles.copyButtonText}>Скопировать</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>Закрыть</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -209,6 +292,51 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'green',
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  copyButton: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  copyButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#ccc',
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontWeight: 'bold',
+    color: '#333',
   },
 });
 

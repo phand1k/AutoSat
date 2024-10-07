@@ -11,9 +11,9 @@ const ServiceDetailsModal = ({ visible, onClose, serviceDetails, theme }) => {
       <View style={[styles.modalView, { backgroundColor: theme.primary }]}>
         <StyledText style={styles.modalTitle}>Подробности об услуге</StyledText>
         <StyledText style={styles.modalSubtitle}>Название услуги: {serviceName || 'Неизвестно'}</StyledText>
-        <StyledText style={styles.modalSubtitle}>Зарплата: {salary} ₸</StyledText>
+        <StyledText style={styles.modalSubtitle}>Зарплата: {salary} тенге</StyledText>
         <StyledText style={styles.modalSubtitle}>Назначено на: {userFullName}</StyledText>
-        <StyledText style={styles.modalSubtitle}>Цена: {price} ₸</StyledText>
+        <StyledText style={styles.modalSubtitle}>Цена: {price} тенге</StyledText>
         <TouchableOpacity style={[styles.closeButton, { backgroundColor: theme.accent }]} onPress={onClose}>
           <Text style={[styles.closeButtonText, { color: theme.primary }]}>Закрыть</Text>
         </TouchableOpacity>

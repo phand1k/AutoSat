@@ -12,6 +12,8 @@ import moment from 'moment';
 import * as Linking from 'expo-linking';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { Switch } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 const initialLayout = { width: Dimensions.get('window').width };
 
@@ -50,13 +52,47 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const [loadingModal, setLoadingModal] = useState(false);
   const [recentlyClosedOrder, setRecentlyClosedOrder] = useState(null);
   const [isLoadingModal, setIsLoadingModal] = useState(false);
-  const [dashboardModalVisible, setDashboardModalVisible] = useState(false);
-  const [dashboardData, setDashboardData] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [modalRefreshing, setModalRefreshing] = useState(false);
+  const [switchValues, setSwitchValues] = useState({});
+  const [loadingOrders, setLoadingOrders] = useState({});
+  const [visibleOrders, setVisibleOrders] = useState({});
+  const [confirmActionVisible, setConfirmActionVisible] = useState(false);
+  const [confirmActionType, setConfirmActionType] = useState(null); // 'complete' или 'delete'
+  const [confirmOrderId, setConfirmOrderId] = useState(null);
+  const [openSwipeableRef, setOpenSwipeableRef] = useState(null);
+  const [reportData, setReportData] = useState({
+    notCompletedOrders: 0,
+    completedServices: 0,
+    totalServiceSum: 0,
+  });
+
+  const [reportModalVisible, setReportModalVisible] = useState(false); // Состояние для видимости модального окна
+  const swipeableRefs = useRef({});
+
+  const fetchReportData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoForWashorderList', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setReportData({
+        notCompletedOrders: data.countOfNotCompletedOrders,
+        completedServices: data.countOfCompeltedServices,
+        totalServiceSum: data.summOfAllServices,
+        notCompletedServices: data.countOfNotCompletedServices
+      });
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+    }
+  };
 
   useEffect(() => {
     fetchOrders();
+    fetchReportData();
     fetchServices();
     fetchUsers();
   }, []);
@@ -66,6 +102,64 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       fetchOrders(); // Обновление списка, если параметр refresh установлен
     }
   }, [route.params?.refresh]);
+
+  const handleToggleSwitch = async (orderId, value) => {
+    setLoadingOrders(prevState => ({
+      ...prevState,
+      [orderId]: true, // Устанавливаем состояние загрузки для данного заказа
+    }));
+
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/ReadyWashOrder/?id=${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ completed: value }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
+
+      }
+      setRefreshing(true);
+      Alert.alert('Отправлено💬', 'Клиенту, если он зарегистрирован отправлено уведомление на телефон');
+      setRefreshing(true);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to update order status');
+      setRefreshing(true);
+    } finally {
+      setLoadingOrders(prevState => ({
+        ...prevState,
+        [orderId]: false, // Сбрасываем состояние загрузки для данного заказа
+      }));
+
+      if (swipeableRefs.current[orderId]) {
+        swipeableRefs.current[orderId].close(); // Закрываем свайп в любом случае
+      }
+    }
+  };
+
+  const renderReportSummary = () => {
+    return (
+      <View style={[styles.reportSummaryContainer, { backgroundColor: activeColors.secondary }]}>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>
+          Незавершенные заказы: {reportData.notCompletedOrders}
+        </Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>
+          Завершенные услуги: {reportData.completedServices}
+        </Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>
+          Сумма всех услуг: {reportData.totalServiceSum} тенге
+        </Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>
+          Незавершенные услуги: {reportData.notCompletedServices} тенге
+        </Text>
+      </View>
+    );
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -134,10 +228,11 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
           licensePlate: carNumber,
           timeAgo: formatDistanceToNow(parseISO(dateOfCreated), { locale: ru }),
           progress: Math.floor(Math.random() * 100),
-          totalServices: `0 ₸`,
+          totalServices: `0 тенге`,
           imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
           services: [],
           phoneNumber,
+          whomAspNetUserId: aspNetUser.fullName,
           name
         };
         setOrders(prevOrders => [newOrder, ...prevOrders]);
@@ -148,14 +243,14 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         setOrders(prevOrders =>
           prevOrders.map(order =>
             order.id === orderId
-              ? { ...order, totalServices: `${newTotalServices} ₸` }
+              ? { ...order, totalServices: `${newTotalServices} тенге` }
               : order
           )
         );
         setOriginalOrders(prevOrders =>
           prevOrders.map(order =>
             order.id === orderId
-              ? { ...order, totalServices: `${newTotalServices} ₸` }
+              ? { ...order, totalServices: `${newTotalServices} тенге` }
               : order
           )
         );
@@ -176,25 +271,30 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   useEffect(() => {
     if (selectedService) {
       const salaryPercentage = 0.4; // 40%
-      const calculatedSalary = (parseFloat(selectedService.price.replace(' ₸', '')) * salaryPercentage).toFixed(2);
-      setSalary(calculatedSalary); // Установить рассчитанную зарплату в поле
+  
+      const priceWithoutCurrency = selectedService.price.replace(' тенге', '');
+      const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? parseFloat(priceWithoutCurrency) : 0;
+  
+      const calculatedSalary = (validPrice * salaryPercentage).toFixed(2);
+      setSalary(calculatedSalary); // Устанавливаем рассчитанную зарплату
     }
   }, [selectedService]);
+  
 
-  const fetchDashboardData = async () => {
-    try {
-      const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoForWashorderList', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      setDashboardData(data);
-    } catch (error) {
-      console.error(error);
-    }
+  const CarImageOrLetter = ({ brand }) => {
+    const getInitialLetters = (brand) => {
+      return brand && brand.length >= 3 ? brand.substring(0, 3).toUpperCase() : brand.toUpperCase();
+    };
+
+    const initialLetters = getInitialLetters(brand);
+
+    return (
+      <View style={styles.carImageOrLetterContainer}>
+        <Text style={styles.carLetter}>{initialLetters}</Text>
+      </View>
+    );
   };
+
 
   const fetchOrderTotal = async (orderId) => {
     try {
@@ -280,6 +380,41 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       console.error(error);
     }
   };
+  const handleDeleteOrder = async (orderId) => {
+    setLoadingOrders(prevState => ({
+      ...prevState,
+      [orderId]: true, // Устанавливаем состояние загрузки для данного заказа
+    }));
+
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/deletewashorder/?id=${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete order');
+      }
+
+      Alert.alert('Удалено🗑️', 'Заказ-наряд успешно удален');
+      fetchOrders(); // Обновить список заказов после удаления
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Ошибка', 'Failed to delete order');
+    } finally {
+      setLoadingOrders(prevState => ({
+        ...prevState,
+        [orderId]: false, // Сбрасываем состояние загрузки для данного заказа
+      }));
+
+      if (swipeableRefs.current[orderId]) {
+        swipeableRefs.current[orderId].close(); // Закрываем свайп в любом случае
+      }
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -338,6 +473,14 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         }
         const sum = await sumResponse.json();
 
+        // Определение статуса заказа на основе значений isReady и isOvered
+        let status = '';
+        if (resolvedOrder.isReady) {
+          status = 'Готов к сдаче клиенту';
+        } else {
+          status = 'В работе';
+        }
+
         return {
           id: resolvedOrder.id,
           name: `${car.name || 'Неизвестная марка машины'} ${modelCar.name || 'Неизвестная модель'}`,
@@ -347,10 +490,11 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
           licensePlate: resolvedOrder.carNumber,
           timeAgo: formatDistanceToNow(parseISO(resolvedOrder.dateOfCreated), { locale: ru }),
           progress: Math.floor(Math.random() * 100),
-          totalServices: `${sum} ₸`,
+          totalServices: `${sum} тенге`,
           imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
           services: [],
-          phoneNumber: resolvedOrder.phoneNumber
+          phoneNumber: resolvedOrder.phoneNumber,
+          status: status, // Добавлено новое поле для статуса
         };
       }));
 
@@ -375,7 +519,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       const services = data.$values.map(service => ({
         id: service.id,
         name: service.name,
-        price: `${service.price} ₸`
+        price: `${service.price} тенге`
       }));
 
       setServices(services);
@@ -402,6 +546,70 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       console.error(error);
     }
   };
+
+  const renderConfirmActionModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={confirmActionVisible}
+      onRequestClose={() => {
+        setConfirmActionVisible(false);
+        if (openSwipeableRef) {
+          openSwipeableRef.close();  // Возвращаем свайп к исходному состоянию
+          setOpenSwipeableRef(null);
+        }
+      }}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.confirmModalView, { backgroundColor: activeColors.primary }]}>
+          <Ionicons
+            name={confirmActionType === 'complete' ? "checkmark-circle-outline" : "trash-outline"}
+            size={60}
+            color={confirmActionType === 'complete' ? "#4CAF50" : "#f44336"}
+            style={styles.confirmIcon}
+          />
+          <StyledText style={[styles.confirmModalTitle, { color: activeColors.tint }]}>
+            {confirmActionType === 'complete' ? 'Завершить заказ?' : 'Удалить заказ?'}
+          </StyledText>
+          <StyledText style={[styles.confirmModalSubtitle, { color: activeColors.tint }]}>
+            {confirmActionType === 'complete'
+              ? 'Вы уверены, что хотите завершить этот заказ? Это действие нельзя отменить.'
+              : 'Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить.'}
+          </StyledText>
+          <View style={styles.confirmModalButtonContainer}>
+            <TouchableOpacity
+              style={[styles.confirmModalButton, { backgroundColor: '#007bff' }]} // Синий цвет для кнопки "Да"
+              onPress={() => {
+                if (confirmActionType === 'complete') {
+                  handleToggleSwitch(confirmOrderId, true);  // Завершение заказа
+                } else if (confirmActionType === 'delete') {
+                  handleDeleteOrder(confirmOrderId);  // Удаление заказа
+                }
+                setConfirmActionVisible(false);
+                setOpenSwipeableRef(null);
+              }}
+            >
+              <Ionicons name="checkmark" size={24} color="#fff" />
+              <Text style={styles.confirmModalButtonText}>Да</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+              onPress={() => {
+                setConfirmActionVisible(false);
+                if (openSwipeableRef) {
+                  openSwipeableRef.close();  // Возвращаем свайп к исходному состоянию
+                  setOpenSwipeableRef(null);
+                }
+              }}
+            >
+              <Ionicons name="close" size={24} color="#fff" />
+              <Text style={styles.confirmModalButtonText}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const fetchSalary = async (service, user) => {
     try {
@@ -451,6 +659,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const createSalarySetting = async (serviceId, userId, salary) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      
+      // Добавляем проверку перед использованием parseFloat
+      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : 0;
+  
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Salary/createsalarysetting', {
         method: 'POST',
         headers: {
@@ -460,10 +672,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         body: JSON.stringify({
           serviceId: serviceId,
           aspNetUserId: userId,
-          salary: parseFloat(salary)
+          salary: validSalary
         })
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Ошибка сервера:', errorData);
@@ -474,6 +686,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       Alert.alert('Ошибка', 'Не удалось создать настройку зарплаты');
     }
   };
+  
 
   const completeWashOrder = async (orderId) => {
     try {
@@ -488,7 +701,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       });
 
       if (response.ok) {
-        Alert.alert('Успех', 'Заказ-наряд успешно завершен');
+        Alert.alert('Завершено🧺', 'Заказ-наряд успешно завершен');
         fetchOrders(); // Обновить список заказов после завершения
       } else {
         Alert.alert('Ошибка', 'Не удалось завершить заказ-наряд');
@@ -510,7 +723,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       });
 
       if (response.ok) {
-        Alert.alert('Успех', 'Заказ-наряд успешно удален');
+        Alert.alert('Удалено🗑️', 'Заказ-наряд успешно удален');
         fetchOrders(); // Обновить список заказов после удаления
       } else {
         Alert.alert('Ошибка', 'Не удалось удалить заказ-наряд');
@@ -532,14 +745,14 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       });
 
       if (response.ok) {
-        Alert.alert('Успех', 'Услуга успешно удалена из заказ-наряда');
+        Alert.alert('Удалено🗑️', 'Услуга успешно удалена с заказ-наряда');
         await fetchAssignedServices(selectedOrder.id); // Обновить список назначенных услуг после удаления
         const updatedSum = await fetchOrderTotal(selectedOrder.id);
         if (updatedSum !== null) {
           setOrders(prevOrders =>
             prevOrders.map(order =>
               order.id === selectedOrder.id
-                ? { ...order, totalServices: `${updatedSum} ₸` }
+                ? { ...order, totalServices: `${updatedSum} тенге` }
                 : order
             )
           );
@@ -563,11 +776,13 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       setOrders(originalOrders);
     } else {
       const filteredData = originalOrders.filter(order =>
-        order.name.toLowerCase().includes(text.toLowerCase())
+        order.name.toLowerCase().includes(text.toLowerCase()) ||  // Фильтрация по марке и модели авто
+        order.licensePlate.toLowerCase().includes(text.toLowerCase()) // Фильтрация по гос. номеру
       );
       setOrders(filteredData);
     }
   };
+
 
   const handleServiceSearch = (text) => {
     setServiceFilter(text);
@@ -617,29 +832,33 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
 
   const confirmOrderCompletion = () => {
     setConfirmationModalVisible(false);
-    Alert.alert('Успех', 'Заказ-наряд завершен');
+    Alert.alert('Завершено🧺', 'Заказ-наряд завершен');
   };
 
   const handleServicePress = (service) => {
     setSelectedService(service);
-    setEditedPrice(service.price.replace(' ₸', ''));
+    const priceWithoutCurrency = service.price.replace(' тенге', '');
+    
+    // Добавляем проверку перед использованием parseFloat
+    const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? parseFloat(priceWithoutCurrency) : 0;
+    setEditedPrice(validPrice.toString()); // Преобразование обратно в строку
     setModalVisible(false);
     setUserModalVisible(true);
   };
+  
 
   const addServiceToOrder = async (service, user, salary) => {
-    if (isAddingServiceRef.current) return;
-    isAddingServiceRef.current = true;
-    setIsAddingService(true);
-
     try {
       if (!user) {
         throw new Error('Не выбран пользователь для услуги');
       }
-
+  
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const price = parseFloat(editedPrice);
-
+      
+      // Преобразование строки в число с проверкой
+      const priceWithoutCurrency = editedPrice && !isNaN(editedPrice) ? parseFloat(editedPrice) : 0;
+      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : 0;
+  
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashService/CreateWashService', {
         method: 'POST',
         headers: {
@@ -649,59 +868,26 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         body: JSON.stringify({
           serviceId: service.id,
           washOrderId: selectedOrder.id,
-          price: price,
+          price: priceWithoutCurrency,
           serviceName: service.name,
           whomAspNetUserId: user.id,
-          salary: salary || parseFloat(editedPrice)
+          salary: validSalary
         })
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Ошибка сервера:', errorData);
         throw new Error('Failed to add service to order');
       }
-
-      const serviceWithUpdatedPrice = { ...service, price: `${price} ₸`, user: `${user.firstName} ${user.lastName} ${user.surName}`, salary: salary || editedPrice };
-
-      const updatedOrders = orders.map(order =>
-        order.id === selectedOrder.id
-          ? { ...order, services: [...order.services, serviceWithUpdatedPrice] }
-          : order
-      );
-
-      setOrders(updatedOrders);
-      setSelectedOrder(prevOrder => ({ ...prevOrder, services: [...prevOrder.services, serviceWithUpdatedPrice] }));
-
-      // Обновление суммы заказа с сервера
-      const updatedSum = await fetchOrderTotal(selectedOrder.id);
-      if (updatedSum !== null) {
-        setOrders(prevOrders =>
-          prevOrders.map(order =>
-            order.id === selectedOrder.id
-              ? { ...order, totalServices: `${updatedSum} ₸` }
-              : order
-          )
-        );
-      }
-
-      Alert.alert(
-        'Успех',
-        `Услуга успешно добавлена:\nМарка: ${selectedOrder.brand}\nМодель: ${selectedOrder.model}\nГос номер: ${selectedOrder.licensePlate}\nНазвание услуги: ${service.name}\nЦена: ${price} ₸\nЗарплата: ${salary || editedPrice} ₸`
-      );
-
-      setSelectedService(null);
-      setSelectedUser(null);
-      setUserModalVisible(false);
-      openModal(selectedOrder);
+      
+      // Логика продолжения работы после успешного добавления услуги
     } catch (error) {
       console.error('Ошибка при добавлении услуги:', error);
       Alert.alert('Ошибка', 'Не удалось добавить услугу к заказу');
-    } finally {
-      isAddingServiceRef.current = false;
-      setIsAddingService(false);
     }
   };
+  
 
   const handleSaveSalary = async () => {
     if (selectedService) {
@@ -725,20 +911,69 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   };
 
   const renderOrderItem = ({ item }) => (
-    <TouchableOpacity onPress={() => openModal(item)} style={[styles.itemContainer, { backgroundColor: activeColors.secondary, borderColor: item.id === recentlyClosedOrder ? activeColors.accent : activeColors.secondary, borderWidth: item.id === recentlyClosedOrder ? 0.8 : 0 }]}>
-      <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-      <View style={styles.orderDetails}>
-        <StyledText style={styles.itemName}>{item.name}</StyledText>
-        <StyledText style={styles.itemDescription}>{item.description}</StyledText>
-        <StyledText style={styles.totalTime}>{item.totalServices}</StyledText>
-        <View style={styles.createdInfo}>
-          <StyledText style={styles.itemTimeAgo}>Создано: {item.timeAgo} назад</StyledText>
+    <Swipeable
+      ref={ref => (swipeableRefs.current[item.id] = ref)}  // Привязываем реф к каждому элементу
+      renderLeftActions={() => (
+        <View style={styles.swipeActionComplete}>
+          {loadingOrders[item.id] ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.swipeActionText}>Завершить</Text>
+          )}
         </View>
-      </View>
-      <TouchableOpacity onPress={() => Linking.openURL(`https://wa.me/${item.phoneNumber}`)}>
-        <Ionicons name="chatbubbles-outline" size={26} color={"#1DA1F2"} />
+      )}
+      renderRightActions={() => (
+        <View style={styles.swipeActionDelete}>
+          {loadingOrders[item.id] ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.swipeActionText}>Удалить</Text>
+          )}
+        </View>
+      )}
+      onSwipeableWillOpen={() => {
+        if (loadingOrders[item.id]) {
+          // Если уже идет запрос, запрещаем открытие свайпа
+          swipeableRefs.current[item.id].close();
+        } else {
+          // Сохраняем ссылку на открытый Swipeable элемент
+          setOpenSwipeableRef(swipeableRefs.current[item.id]);
+        }
+      }}
+
+      onSwipeableLeftOpen={() => {
+        setConfirmActionType('complete');
+        setConfirmOrderId(item.id);
+        setConfirmActionVisible(true);
+      }}  // Завершение заказа
+
+      onSwipeableRightOpen={() => {
+        setConfirmActionType('delete');
+        setConfirmOrderId(item.id);
+        setConfirmActionVisible(true);
+      }}  // Удаление заказа
+
+    >
+      <TouchableOpacity onPress={() => openModal(item)} style={[styles.itemContainer, { backgroundColor: activeColors.secondary, borderColor: item.id === recentlyClosedOrder ? activeColors.accent : activeColors.secondary, borderWidth: item.id === recentlyClosedOrder ? 0.8 : 0 }]}>
+        <CarImageOrLetter brand={item.brand} />
+        <View style={styles.orderDetails}>
+          <StyledText style={styles.itemName}>{item.name}</StyledText>
+          <StyledText style={styles.itemDescription}>{item.description}</StyledText>
+          <StyledText style={styles.totalTime}>{item.totalServices}</StyledText>
+          <StyledText
+            style={[
+              styles.itemStatus,
+              { color: item.status === 'В работе' ? 'orange' : item.status === 'Готов к сдаче клиенту' ? 'green' : 'defaultColor' }
+            ]}
+          >
+            {item.status || 'Статус неизвестен'}
+          </StyledText>
+          <View style={styles.createdInfo}>
+            <StyledText style={styles.itemTimeAgo}>Создано: {item.timeAgo} назад</StyledText>
+          </View>
+        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </Swipeable>
   );
 
   const renderServiceItem = (service) => {
@@ -774,9 +1009,9 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         <View style={[styles.modalView, { backgroundColor: activeColors.primary }]}>
           <StyledText style={styles.modalTitle}>Подробности об услуге</StyledText>
           <StyledText style={styles.modalSubtitle}>Название услуги: {serviceName || 'Неизвестно'}</StyledText>
-          <StyledText style={styles.modalSubtitle}>Зарплата: {salary} ₸</StyledText>
+          <StyledText style={styles.modalSubtitle}>Зарплата: {salary} тенге</StyledText>
           <StyledText style={styles.modalSubtitle}>Назначено на: {userFullName}</StyledText>
-          <StyledText style={styles.modalSubtitle}>Цена: {price} ₸</StyledText>
+          <StyledText style={styles.modalSubtitle}>Цена: {price} тенге</StyledText>
           <TouchableOpacity
             style={[styles.closeButton, { backgroundColor: activeColors.accent }]}
             onPress={() => setDetailsModalVisible(false)}
@@ -789,19 +1024,25 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   };
 
   const renderAssignedServiceItem = (service) => {
-    if (!service.washServiceId) {
-      console.warn('Invalid washServiceId:', service);
-      return null;
-    }
-    console.log('Assigned service:', service);
-    const assignedUser = service.aspNetUser ? `${service.aspNetUser.firstName} ${service.aspNetUser.lastName} ${service.aspNetUser.surName}` : 'Неизвестно';
+    const handlePress = () => {
+      closeModal(); // Закрываем модальное окно
+      setTimeout(() => {
+        navigation.navigate('ServiceDetails', { washServiceId: service.washServiceId });
+      }, 300); // Задержка, чтобы убедиться, что модальное окно закрылось
+    };
 
     return (
-      <TouchableOpacity key={service.$id} style={[styles.assignedServiceItem, { backgroundColor: activeColors.secondary }]} onPress={() => fetchServiceDetails(service.washServiceId)}>
-        <StyledText style={styles.assignedServiceName} numberOfLines={1}>{service.serviceName}</StyledText>
-        <StyledText style={styles.assignedServicePrice}>{service.price} ₸</StyledText>
-        <StyledText style={styles.assignedServiceStatus}>{service.isOvered ? 'Завершено' : 'Не завершено'}</StyledText>
-        <StyledText style={styles.assignedServiceUser}>Назначено: {assignedUser}</StyledText>
+      <TouchableOpacity
+        key={service.$id}
+        style={[styles.serviceItem, { backgroundColor: activeColors.secondary }]}
+        onPress={handlePress}
+      >
+        <StyledText style={styles.assignedServiceName} numberOfLines={2}>
+          {service.serviceName || 'Без названия'}
+        </StyledText>
+        <StyledText style={styles.assignedServicePrice}>
+          {service.price ? `${service.price} тенге` : 'Цена не указана'}
+        </StyledText>
         <TouchableOpacity
           onPress={() => deleteWashServiceFromOrder(service.washServiceId)}
           style={styles.removeAssignedServiceButton}
@@ -848,124 +1089,6 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     }
   };
 
-  const handleSendReport = async () => {
-    if (!dashboardData || !phoneNumber) {
-      Alert.alert('Ошибка', 'Введите номер телефона и получите данные');
-      return;
-    }
-
-    const message = `Отчет по заказам на ${moment().format('DD.MM.YYYY')}:
-    - Общее количество заказов: ${dashboardData.countOfNotCompletedOrders}
-    - Общее количество не завершенных услуг: ${dashboardData.countOfNotCompletedServices}
-    - Общее количество завершенных услуг: ${dashboardData.countOfCompeltedServices}
-    - Общая сумма услуг: ${dashboardData.summOfAllServices} ₸`;
-
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    await Linking.openURL(url);
-  };
-
-  const renderDashboardModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={dashboardModalVisible}
-      onRequestClose={() => setDashboardModalVisible(false)}
-      onShow={fetchDashboardData}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.overlay}>
-          <View style={[styles.dashboardModalView, { backgroundColor: activeColors.primary }]}>
-            <View style={styles.dashboardContainer}>
-              <View style={styles.dashboardHeader}>
-                <StyledText style={styles.dashboardTitle}>Статистика машин на мойке</StyledText>
-              </View>
-              <StyledText style={styles.dashboardSubtitle}>Текущее время: {moment().format('HH:mm:ss')}</StyledText>
-              {dashboardData ? (
-                <>
-                  <View style={styles.dashboardItem}>
-                    <Ionicons name="car-sport-outline" size={40} color={activeColors.accent} />
-                    <View style={styles.dashboardTextContainer}>
-                      <StyledText style={styles.dashboardItemTitle}>Машин на мойке</StyledText>
-                      <StyledText style={styles.dashboardItemValue}>{dashboardData.countOfNotCompletedOrders}</StyledText>
-                    </View>
-                  </View>
-                  <View style={styles.dashboardItem}>
-                    <Ionicons name="cash-outline" size={40} color={activeColors.accent} />
-                    <View style={styles.dashboardTextContainer}>
-                      <StyledText style={styles.dashboardItemTitle}>Сумма услуг</StyledText>
-                      <StyledText style={styles.dashboardItemValue}>{dashboardData.summOfAllServices} ₸</StyledText>
-                    </View>
-                  </View>
-                  <View style={styles.dashboardItem}>
-                    <Ionicons name="construct-outline" size={40} color={activeColors.accent} />
-                    <View style={styles.dashboardTextContainer}>
-                      <StyledText style={styles.dashboardItemTitle}>Количество услуг</StyledText>
-                      <StyledText style={styles.dashboardItemValue}>{dashboardData.countOfNotCompletedServices}</StyledText>
-                    </View>
-                  </View>
-                  <View style={styles.dashboardItem}>
-                    <Ionicons name="checkmark-done-outline" size={40} color={activeColors.accent} />
-                    <View style={styles.dashboardTextContainer}>
-                      <StyledText style={styles.dashboardItemTitle}>Завершено</StyledText>
-                      <StyledText style={styles.dashboardItemValue}>{dashboardData.countOfCompeltedServices}</StyledText>
-                    </View>
-                  </View>
-                  <TextInput
-                    style={[styles.phoneNumberInput, { backgroundColor: activeColors.secondary, borderColor: activeColors.secondary, color: activeColors.tint }]}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    placeholder="Введите номер телефона"
-                    placeholderTextColor={activeColors.tint}
-                    keyboardType="phone-pad"
-                  />
-                  <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                      style={[styles.sendButton, { backgroundColor: activeColors.accent }]}
-                      onPress={handleSendReport}
-                    >
-                      <Text style={[styles.buttonText, { color: activeColors.primary }]}>Отправить в WhatsApp</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.closeButton, { backgroundColor: activeColors.accent }]}
-                    onPress={() => setDashboardModalVisible(false)}
-                  >
-                    <Text style={[styles.closeButtonText, { color: activeColors.primary }]}>Закрыть</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <ActivityIndicator size="large" color={activeColors.tint} />
-              )}
-            </View>
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
-
-  const renderOrderDetailsTab = () => {
-    if (!selectedOrder) return null;
-    const { brand, model, licensePlate, timeAgo, totalServices } = selectedOrder;
-
-    return (
-      <ScrollView
-        style={styles.orderDetailsContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={modalRefreshing}
-            onRefresh={onModalRefresh}
-            tintColor={activeColors.tint}
-          />
-        }
-      >
-        <StyledText style={styles.orderDetailItem}>Марка: {brand}</StyledText>
-        <StyledText style={styles.orderDetailItem}>Модель: {model}</StyledText>
-        <StyledText style={styles.orderDetailItem}>Гос номер: {licensePlate}</StyledText>
-        <StyledText style={styles.orderDetailItem}>Создано: {timeAgo} назад</StyledText>
-        <StyledText style={styles.orderDetailItem}>Общая сумма услуг: {totalServices}</StyledText>
-      </ScrollView>
-    );
-  };
 
   const renderServiceTab = () => (
     <>
@@ -1012,27 +1135,28 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
 
   const renderScene = SceneMap({
     first: renderServiceTab,
-    second: renderAssignedServicesTab,
-    third: renderOrderDetailsTab,
+    second: renderAssignedServicesTab
   });
 
   const [index, setIndex] = useState(0);
   const [routes] = useState([
     { key: 'first', title: 'Добавление услуг' },
-    { key: 'second', title: 'Назначенные услуги' },
-    { key: 'third', title: 'Подробные данные' },
+    { key: 'second', title: 'Назначенные услуги' }
   ]);
 
   return (
     <View style={[{ backgroundColor: activeColors.primary }, styles.container]}>
       {renderServiceDetailsModal()}
-      {renderDashboardModal()}
+      {renderConfirmActionModal()}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Машины на мойке</Text>
-        <TouchableOpacity onPress={() => setDashboardModalVisible(true)} style={styles.infoButton}>
-          <Ionicons name="download-outline" size={26} color='#1DA1F2' />
-        </TouchableOpacity>
       </View>
+      <View style={styles.iconWrapper}>
+  <TouchableOpacity onPress={() => setReportModalVisible(true)}>
+    <Ionicons name="stats-chart" size={24} color={activeColors.tint} />
+  </TouchableOpacity>
+</View>
+
       <TextInput
         style={[styles.searchBox, { backgroundColor: activeColors.secondary, borderColor: activeColors.secondary, color: activeColors.tint }]}
         value={filter}
@@ -1051,12 +1175,13 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         }
       />
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.filterButton, { backgroundColor: activeColors.accent }]}
-          onPress={() => navigation.navigate('CompletedWashOrders')}
-        >
-          <Text style={[styles.filterButtonText, { color: activeColors.primary }]}>Завершенные заказ-наряды</Text>
-        </TouchableOpacity>
+      <TouchableOpacity 
+  style={[styles.reportButton, { backgroundColor: activeColors.accent }]}
+  onPress={() => navigation.navigate('CompletedWashOrders')} // Изменено на 'DashboardScreen'
+>
+  <Ionicons name="bar-chart-outline" size={15} color={activeColors.primary} style={styles.reportIcon} />
+  <Text style={[styles.reportButtonText, { color: activeColors.primary }]}>Отчет</Text>
+</TouchableOpacity>
       </View>
       {selectedOrder && (
         <Modal
@@ -1071,7 +1196,19 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
             ) : (
               <>
                 <View style={styles.modalHeader}>
-                  <StyledText style={styles.modalTitle}>{selectedOrder.licensePlate}</StyledText>
+                  <View style={styles.licensePlateContainer}>
+                    <StyledText style={styles.modalTitle}>{selectedOrder.licensePlate}</StyledText>
+                    <TouchableOpacity
+                      style={styles.iconWrapper}
+                      onPress={() => {
+                        const phoneNumber = selectedOrder.phoneNumber.replace(/[^0-9]/g, ''); // Убираем все нечисловые символы
+                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                        Linking.openURL(whatsappUrl);
+                      }}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={29} color="#007bff" />
+                    </TouchableOpacity>
+                  </View>
                   <StyledText style={styles.modalSubtitle}>{selectedOrder.brand} {selectedOrder.model}</StyledText>
                 </View>
                 <TabView
@@ -1183,8 +1320,8 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
           />
           <StyledText style={styles.modalSubtitle}>
             {salary && parseFloat(salary) < 100 && selectedService
-              ? `Мастер с этой услуги будет получать ${(parseFloat(selectedService.price) * (parseFloat(salary) / 100)).toFixed(2)} ₸`
-              : `Мастер с этой услуги будет получать ${salary} ₸`}
+              ? `Мастер с этой услуги будет получать ${(parseFloat(selectedService.price) * (parseFloat(salary) / 100)).toFixed(2)} тенге`
+              : `Мастер с этой услуги будет получать ${salary} тенге`}
           </StyledText>
 
           <View style={styles.modalButtonContainer}>
@@ -1208,6 +1345,30 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
           <ActivityIndicator size="large" color={activeColors.accent} />
         </View>
       )}
+      {/* Модальное окно для отчетов */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={reportModalVisible}
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <View style={styles.reportModalContainer}>
+          <View style={[styles.reportModalView, { backgroundColor: activeColors.primary }]}>
+            <Ionicons name="bar-chart-outline" size={50} color={activeColors.accent} />
+            <StyledText style={[styles.reportModalTitle, { color: activeColors.tint }]}>Отчеты</StyledText>
+            <StyledText style={[styles.reportModalSubtitle, { color: activeColors.tint }]}>Незавершенные заказы: {reportData.notCompletedOrders}</StyledText>
+            <StyledText style={[styles.reportModalSubtitle, { color: activeColors.tint }]}>Завершенные услуги: {reportData.completedServices}</StyledText>
+            <StyledText style={[styles.reportModalSubtitle, { color: activeColors.tint }]}>Незавершенные услуги: {reportData.notCompletedServices}</StyledText>
+            <StyledText style={[styles.reportModalSubtitle, { color: activeColors.tint }]}>Сумма всех услуг: {reportData.totalServiceSum} тенге</StyledText>
+            <TouchableOpacity
+              style={[styles.reportModalButton, { backgroundColor: activeColors.accent }]}
+              onPress={() => setReportModalVisible(false)}
+            >
+              <Text style={[styles.reportModalButtonText, { color: activeColors.primary }]}>Закрыть</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1236,11 +1397,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   searchBox: {
-    height: 40,
+    height: 50, // Увеличение высоты
     borderWidth: 1,
     borderRadius: 5,
-    paddingHorizontal: 10,
-    margin: 10,
+    paddingHorizontal: 15, // Увеличение padding
+    marginVertical: 15, // Увеличение вертикального отступа
+    fontSize: 18, // Увеличение размера шрифта
   },
   list: {
     flex: 1,
@@ -1323,16 +1485,100 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
   },
+  swipeAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    backgroundColor: 'green',
+    marginVertical: 5,
+    borderRadius: 10,
+  },
+  swipeActionComplete: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    backgroundColor: 'green',
+    marginVertical: 5,
+    borderRadius: 10,
+  },
+  swipeActionDelete: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    backgroundColor: 'red',
+    marginVertical: 5,
+    borderRadius: 10,
+  },
+  swipeActionText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   assignedServiceListContainer: {
     flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Полупрозрачный фон
+  },
+  confirmModalView: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  confirmIcon: {
+    marginBottom: 15,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  confirmModalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 20,
+  },
+  confirmModalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  confirmModalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50', // Зеленая кнопка
+    borderRadius: 20,
+    padding: 10,
+    marginHorizontal: 10,
+    flex: 1,
+  },
+  confirmModalCancelButton: {
+    backgroundColor: '#f44336', // Красная кнопка
+  },
+  confirmModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 5,
   },
   serviceItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
+    padding: 15, // Увеличение padding
+    marginVertical: 10, // Увеличение отступа сверху и снизу
+    borderRadius: 10, // Увеличение радиуса границы
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -1343,9 +1589,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
+    padding: 15, // Увеличение padding
+    marginVertical: 10, // Увеличение отступа сверху и снизу
+    borderRadius: 10, // Увеличение радиуса границы
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -1354,12 +1600,12 @@ const styles = StyleSheet.create({
   },
   assignedServiceName: {
     flex: 2,
-    fontSize: 16,
+    fontSize: 17, // Увеличение размера шрифта
     flexWrap: 'wrap',
   },
   assignedServicePrice: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17, // Увеличение размера шрифта
   },
   addServiceButton: {
     marginLeft: 10,
@@ -1447,48 +1693,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
   },
-  dashboardModalView: {
-    flex: 1,
+  carImageOrLetterContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#1DA1F2',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    marginRight: 20,
   },
-  dashboardContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    width: '90%',
-  },
-  dashboardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dashboardTitle: {
+  carLetter: {
     fontSize: 20,
+    color: '#fff',
     fontWeight: 'bold',
   },
-  dashboardSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  dashboardItem: {
+  licensePlateContainer: {
+    width: '100%',
+    position: 'relative',
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
   },
-  dashboardTextContainer: {
-    marginLeft: 10,
-  },
-  dashboardItemTitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  dashboardItemValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  iconWrapper: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
   },
   phoneNumberInput: {
     height: 40,
@@ -1522,6 +1751,41 @@ const styles = StyleSheet.create({
   orderDetailsContainer: {
     padding: 10,
   },
+  reportSummaryContainer: {
+    padding: 20,
+    marginBottom: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  summaryText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  reportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginHorizontal: 10,
+    marginVertical: 15,
+    elevation: 3, // Добавление тени для кнопки
+  },
+
+  reportButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+
+  reportIcon: {
+    marginRight: 10,
+  },
   orderDetailItem: {
     fontSize: 16,
     marginBottom: 5,
@@ -1545,6 +1809,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  itemStatus: {
+    fontSize: 14,
+    color: '#007bff',
+    marginTop: 5,
+  },
+
+  switchContainer: {
+    marginLeft: 'auto',
+    marginRight: 10,
+  },
+  // Стили для модального окна отчетов
+  reportModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  reportModalView: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  reportModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: 15,
+  },
+  reportModalSubtitle: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 10,
+  },
+  reportModalButton: {
+    marginTop: 20,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportModalButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

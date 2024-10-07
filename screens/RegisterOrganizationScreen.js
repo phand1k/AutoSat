@@ -11,12 +11,11 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import { RadioButton, Button, Dialog, Portal, Provider } from 'react-native-paper';
+import { Button, Dialog, Portal, Provider, Card } from 'react-native-paper';
 import { colors } from "../config/theme";
 import { ThemeContext } from "../context/ThemeContext";
 import CustomButton from "../components/CustomButton";
 import NetInfo from "@react-native-community/netinfo";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RegisterOrganizationScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -33,7 +32,7 @@ const RegisterOrganizationScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchOrganizationTypes = async () => {
       try {
-        const response = await fetch('http://avtosat-001-site1.ftempurl.com/api/Organization/TypeOfOrganizationsList');
+        const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Organization/TypeOfOrganizationsList');
         const data = await response.json();
         setOrganizationTypes(data.$values);
       } catch (error) {
@@ -240,15 +239,18 @@ const RegisterOrganizationScreen = ({ navigation }) => {
             <Dialog.Title>Выберите тип организации</Dialog.Title>
             <Dialog.Content>
               {organizationTypes.map((type) => (
-                <View key={type.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                  <RadioButton
-                    value={type.id}
-                    status={selectedType === type.id ? 'checked' : 'unchecked'}
-                    onPress={() => setSelectedType(type.id)}
-                    color={activeColors.accent}
-                  />
-                  <Text style={{ color: activeColors.tint }}>{type.name}</Text>
-                </View>
+                <TouchableOpacity key={type.id} onPress={() => setSelectedType(type.id)}>
+                  <Card style={{
+                    marginBottom: 10,
+                    backgroundColor: selectedType === type.id ? activeColors.accent : activeColors.primary,
+                    borderWidth: 1,
+                    borderColor: selectedType === type.id ? activeColors.secondary : activeColors.primary,
+                  }}>
+                    <Card.Content>
+                      <Text style={{ color: activeColors.tint }}>{type.name}</Text>
+                    </Card.Content>
+                  </Card>
+                </TouchableOpacity>
               ))}
             </Dialog.Content>
             <Dialog.Actions>

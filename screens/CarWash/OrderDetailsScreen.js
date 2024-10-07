@@ -41,7 +41,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
       const services = data.$values.map(service => ({
         id: service.id,
         name: service.name,
-        price: `${service.price} ₸`
+        price: `${service.price} тенге`
       }));
 
       setServices(services);
@@ -96,7 +96,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
       <View key={service.id} style={[styles.assignedServiceItem, { backgroundColor: activeColors.secondary }]}>
         <StyledText style={styles.assignedServiceName} numberOfLines={2}>{service.name}</StyledText>
         <StyledText style={styles.assignedServicePrice}>{service.price}</StyledText>
-        <StyledText style={styles.assignedServiceStatus}>{service.salary} ₸</StyledText>
+        <StyledText style={styles.assignedServiceStatus}>{service.salary} тенге</StyledText>
       </View>
     );
   };

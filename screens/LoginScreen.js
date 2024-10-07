@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -28,7 +28,12 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const handleForgotPassword = () => {
+    navigation.navigate('ForgotPassword');
+  };
+  useEffect(() => {
+    console.log('Login screen rendered');
+  }, []);
   const registerForPushNotificationsAsync = async () => {
     let token;
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -42,7 +47,7 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
     token = (await Notifications.getDevicePushTokenAsync()).data;
-    console.log("Push token "+token);
+    console.log("Push token " + token);
     try {
       const jwtToken = await AsyncStorage.getItem('access_token_avtosat');
       if (!jwtToken) {
@@ -65,9 +70,42 @@ const LoginScreen = ({ navigation }) => {
       setError('Произошла ошибка при регистрации токена');
     }
     return token;
-  }
+  };
+
+  const fetchAndSaveOrganizationType = async (token) => {
+    try {
+      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/organization/GetTypeOfOrganization', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization type');
+      }
+
+      const organizationType = await response.text();
+      console.log('Organization type:', organizationType);
+
+      await AsyncStorage.setItem('typeOfOrganization_avtosat', organizationType);
+    } catch (error) {
+      console.error('Error fetching organization type:', error);
+      Alert.alert('Ошибка', 'Произошла ошибка при получении типа организации');
+    }
+  };
 
   const handleLogin = async (demoPhoneNumber, demoPassword) => {
+    console.log('Attempting to log in with phone:', phoneNumber, 'and password:', password);
+  try {
+    const response = await fetch(/* ваш запрос */);
+    console.log('Login response status:', response.status);
+    const data = await response.json();
+    console.log('Login data:', data);
+  } catch (error) {
+    console.error('Login error:', error);
+  }
     const connectionState = await NetInfo.fetch();
     if (!connectionState.isConnected) {
       Alert.alert('Ошибка', 'Нет интернет-соединения');
@@ -132,6 +170,9 @@ const LoginScreen = ({ navigation }) => {
       const storedRole = await AsyncStorage.getItem('role_user_avtosat');
       console.log('Stored role:', storedRole); // Логирование для проверки
 
+      // Получаем и сохраняем тип организации
+      await fetchAndSaveOrganizationType(token);
+
       // Register for push notifications
       await registerForPushNotificationsAsync();
 
@@ -191,6 +232,9 @@ const LoginScreen = ({ navigation }) => {
               <Text style={{ color: activeColors.accent, fontWeight: '700' }}> Зарегистрироваться </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity onPress={handleForgotPassword}>
+            <Text style={{ color: activeColors.accent, marginTop: 20, textAlign: 'center' }}>Забыли пароль?</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </TouchableWithoutFeedback>

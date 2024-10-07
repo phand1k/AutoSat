@@ -17,7 +17,15 @@ const SettingsScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [userRole, setUserRole] = useState(null); // Состояние для роли пользователя
+  useEffect(() => {
+    const fetchUserRole = async () => {
+        const role = await AsyncStorage.getItem('role_user_avtosat');
+        setUserRole(role);
+    };
 
+    fetchUserRole(); // Загружаем роль пользователя при монтировании компонента
+}, []);
   const toggleTheme = () => {
     updateTheme();
     setIsDarkTheme(prev => !prev);
@@ -186,10 +194,13 @@ const SettingsScreen = ({ navigation }) => {
             <SettingsItem label="Дата окончания подписки">
               <StyledText>{new Date(organizationInfo.dateOfEnd).toLocaleDateString()}</StyledText>
             </SettingsItem>
-            <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.infoButton}>
-              <Ionicons name="help-circle-outline" size={24} color={activeColors.accent} />
-              <StyledText style={{ color: activeColors.accent }}>Вы владелец данной организации?</StyledText>
-            </TouchableOpacity>
+            {userRole !== 'Директор' && (
+               <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.infoButton}>
+               <Ionicons name="help-circle-outline" size={24} color={activeColors.accent} />
+               <StyledText style={{ color: activeColors.accent }}>Вы владелец данной организации?</StyledText>
+             </TouchableOpacity>
+            )}
+           
           </View>
         )}
       </ScrollView>

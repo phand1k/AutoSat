@@ -18,6 +18,13 @@ import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
+// Функция для проверки правильности номера
+const validatePhoneNumber = (phoneNumber) => {
+  const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, ''); // Убираем все символы, кроме цифр
+  const regex = /^(7(700|701|702|705|707|708|747|771|775|776|777|778))\d{7}$/;
+  return regex.test(unmaskedPhoneNumber); // Проверяем, соответствует ли номер формату
+};
+
 const RegisterScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
@@ -63,7 +70,7 @@ const RegisterScreen = ({ navigation }) => {
       setError('Произошла ошибка при регистрации токена');
     }
     return token;
-  }
+  };
 
   const handleRegister = async () => {
     const connectionState = await NetInfo.fetch();
@@ -74,6 +81,12 @@ const RegisterScreen = ({ navigation }) => {
 
     if (!phoneNumber || phoneNumber.includes('_') || !organizationId || !password || !confirmPassword) {
       Alert.alert("Ошибка", "Заполните все поля корректно");
+      return;
+    }
+
+    // Проверка корректности номера
+    if (!validatePhoneNumber(phoneNumber)) {
+      Alert.alert("Ошибка", "Введите корректный номер телефона.");
       return;
     }
 
@@ -100,11 +113,9 @@ const RegisterScreen = ({ navigation }) => {
       if (!response.ok) {
         if (response.status === 404) {
           Alert.alert("Ошибка", "БИН/ИИН организации некорректный или организация не зарегистрирована");
-        }
-        else if (response.status === 401) {
+        } else if (response.status === 401) {
           Alert.alert("Ошибка", "Этот номер телефона уже существует");
-        }
-        else {
+        } else {
           Alert.alert("Ошибка", "Ошибка при регистрации");
         }
         setLoading(false);
@@ -112,7 +123,7 @@ const RegisterScreen = ({ navigation }) => {
       }
 
       Alert.alert("Успех", "Регистрация прошла успешно");
-      
+
       // Автоматический вход после регистрации
       const loginResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/login', {
         method: 'POST',
@@ -228,7 +239,7 @@ const RegisterScreen = ({ navigation }) => {
           }}
           placeholder="БИН/ИИН организации"
           placeholderTextColor="#aaaaaa"
-          maxLength = {12}
+          maxLength={12}
           keyboardType="numeric"
           onChangeText={setOrganizationId}
           value={organizationId}
@@ -286,14 +297,14 @@ const RegisterScreen = ({ navigation }) => {
               Войти
             </Text>
           </TouchableOpacity>
-          
         </View>
+        
         <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: 30 }}>
-            <Text style={{ color: activeColors.tint }}>Нет номера организации? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate("RegisterOrganization")}>
-              <Text style={{ color: activeColors.accent, fontWeight: "700" }}> Регистрация организации </Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={{ color: activeColors.tint }}>Нет номера организации? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("RegisterOrganization")}>
+            <Text style={{ color: activeColors.accent, fontWeight: "700" }}> Регистрация организации </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

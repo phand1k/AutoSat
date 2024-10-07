@@ -57,7 +57,7 @@ const UserDetailScreen = ({ route, navigation }) => {
     <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
       <View style={styles.earningDetails}>
         <StyledText style={styles.itemTitle}>{item.service}</StyledText>
-        <StyledText style={styles.itemMessage}>{item.amount}₸</StyledText>
+        <StyledText style={styles.itemMessage}>{item.amount}тенге</StyledText>
         <StyledText style={styles.itemDate}>{format(parseISO(item.date), 'dd/MM/yyyy')}</StyledText>
       </View>
     </View>

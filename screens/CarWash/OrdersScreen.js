@@ -48,7 +48,7 @@ const OrdersScreen = ({ navigation }) => {
         model: order.modelCar?.name || 'Неизвестно',
         licensePlate: order.carNumber,
         timeAgo: moment(order.dateOfCreated).fromNow(),
-        totalServices: '0 ₸', // Подгрузим позже
+        totalServices: '0 тенге', // Подгрузим позже
         imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
         phoneNumber: order.phoneNumber
       }));

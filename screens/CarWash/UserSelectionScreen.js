@@ -56,6 +56,14 @@ const UserSelectionScreen = ({ route, navigation }) => {
 
   const handleSaveSalary = async () => {
     if (selectedUser && salary) {
+      // Добавляем проверку перед использованием parseFloat
+      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : null;
+  
+      if (validSalary === null || validSalary <= 0) {
+        Alert.alert('Ошибка', 'Введите корректную зарплату.');
+        return;
+      }
+  
       try {
         setIsFetchingSalary(true);
         const token = await AsyncStorage.getItem('access_token_avtosat');
@@ -68,16 +76,16 @@ const UserSelectionScreen = ({ route, navigation }) => {
           body: JSON.stringify({
             serviceId: service.id,
             aspNetUserId: selectedUser.id,
-            salary: parseFloat(salary)
+            salary: validSalary
           })
         });
-
+  
         if (!response.ok) {
           const errorData = await response.json();
           console.error('Ошибка сервера:', errorData);
           throw new Error('Failed to create salary setting');
         }
-
+  
         navigation.navigate('OrderDetails', { order });
       } catch (error) {
         console.error('Ошибка при создании настройки зарплаты:', error);
@@ -89,6 +97,8 @@ const UserSelectionScreen = ({ route, navigation }) => {
       Alert.alert('Ошибка', 'Выберите пользователя и введите зарплату перед сохранением.');
     }
   };
+  
+  
 
   const renderUserItem = ({ item }) => (
     <TouchableOpacity

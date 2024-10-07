@@ -150,7 +150,7 @@ const CreateOrderScreen = () => {
       setPhoneNumber('');
       setStep(1);
   
-      Alert.alert('Успех', 'Заказ-наряд создан успешно!');
+      Alert.alert('', 'Вы успешно приняли машину на мойку 🧼');
       navigation.navigate('Мойка', { refresh: true });
     } catch (error) {
       console.error('Error creating wash order:', error);
