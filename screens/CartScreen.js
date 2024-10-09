@@ -337,9 +337,9 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
       setError('Все поля должны быть заполнены');
       return;
     }
-    
+    console.log(price);
     // Проверка, является ли введённая цена числом и больше ли она нуля
-    if (isNaN(price) || parseFloat(price) <= 0) {
+    if (isNaN(price) || price <= 0) {
       setError('Цена должна быть положительным числом');
       return;
     }
@@ -358,7 +358,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
           'Content-Type': 'application/json',
         },
         // Используем проверенное значение с корректной ценой
-        body: JSON.stringify({ name: serviceName, price: parseFloat(price) }),
+        body: JSON.stringify({ name: serviceName, price: price }),
       });
   
       if (!response.ok) {

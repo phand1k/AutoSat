@@ -171,7 +171,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
       ...prevAmounts,
       [method]: amount,
     }));
-    if (selectedPaymentMethod === 'Смешанная оплата' && parseFloat(amount) > totalToPay) {
+    if (selectedPaymentMethod === 'Смешанная оплата' && amount > totalToPay) {
       setExceedsAmount(true);
     } else {
       setExceedsAmount(false);
@@ -179,7 +179,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   };
 
   const handleMixedPaymentValidation = () => {
-    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
+    const cashAmount = paymentAmounts['Наличный'] || 0;
     if (cashAmount >= totalToPay) {
       Alert.alert(
         'Предупреждение',
@@ -193,7 +193,8 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const handleConfirmPayment = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     const paymentMethodId = paymentMethods.find((method) => method.name === selectedPaymentMethod)?.id;
-    const amount = parseFloat(paymentAmounts[selectedPaymentMethod]) || totalToPay;
+    console.log(paymentAmounts[selectedPaymentMethod])
+    const amount = paymentAmounts[selectedPaymentMethod] || totalToPay;
 
     try {
       const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
@@ -241,7 +242,8 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
           {
             text: 'Подтвердить',
             onPress: () => {
-              const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
+              console.log(paymentAmounts['Наличный'])
+              const cashAmount = paymentAmounts['Наличный'] || 0;
               const change = cashAmount - totalToPay;
               Alert.alert('Сдача', `Ваша сдача: ${change} тг`);
               setCashAmountScreenVisible(false);

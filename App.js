@@ -47,48 +47,10 @@ const App = () => {
   const [statusBarStyle, setStatusBarStyle] = useState(STYLES[0]);
   const [statusBarTransition, setStatusBarTransition] = useState(TRANSITIONS[0]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [latestVersion, setLatestVersion] = useState(null);
 
   // Функция для получения версии с указанного URL
-  const fetchLatestVersion = async () => {
-    try {
-      const response = await fetch('https://gchelper.kz/current-version.html');
-      const htmlText = await response.text();  // Получаем полный HTML как текст
-
-      // Извлекаем версию с помощью регулярного выражения
-      const versionMatch = htmlText.match(/<span id="app-version">([\d.]+)<\/span>/);
-      if (versionMatch && versionMatch[1]) {
-        return versionMatch[1];  // Версия, которая находится в теге <span id="app-version">
-      } else {
-        console.error('Version not found in HTML');
-        return null;
-      }
-    } catch (error) {
-      console.error("Error fetching version:", error);
-      return null;
-    }
-  };
 
   // Функция для проверки версии и отображения модального окна при необходимости
-  const checkVersion = async () => {
-    try {
-      // Получаем последнюю версию с сервера
-      const serverVersion = await fetchLatestVersion();
-
-      // Устанавливаем текущую версию вручную, если не используете expo-updates
-      const currentVersion = "8.0.0";
-
-      console.log("Current Version:", currentVersion);
-      console.log("Server Version:", serverVersion);
-
-      if (serverVersion && currentVersion !== serverVersion) {
-        setLatestVersion(serverVersion);
-        setModalVisible(true); // Показываем модальное окно
-      }
-    } catch (error) {
-      console.error("Error checking version:", error);
-    }
-  };
   const updateTheme = async (newTheme) => {
     let mode;
     if (!newTheme) {
@@ -120,7 +82,6 @@ const App = () => {
     };
 
     prepare();
-    checkVersion(); // Проверяем версию при запуске приложения
   }, []);
 
   useEffect(() => {

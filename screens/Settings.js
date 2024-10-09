@@ -88,7 +88,8 @@ const SettingsScreen = ({ navigation }) => {
   const confirmOrganizationPassword = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Organization/ConfirmRights/?password=${parseFloat(password)}`, {
+      console.log(password);
+      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Organization/ConfirmRights/?password=${password}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

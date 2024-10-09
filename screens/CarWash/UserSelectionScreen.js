@@ -56,8 +56,8 @@ const UserSelectionScreen = ({ route, navigation }) => {
 
   const handleSaveSalary = async () => {
     if (selectedUser && salary) {
-      // Добавляем проверку перед использованием parseFloat
-      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : null;
+      console.log(salary);
+      const validSalary = salary && !isNaN(salary) ? salary : null;
   
       if (validSalary === null || validSalary <= 0) {
         Alert.alert('Ошибка', 'Введите корректную зарплату.');

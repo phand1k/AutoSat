@@ -172,9 +172,9 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
       setCashAmountScreenVisible(true);
     }
   };
-
   const handleAmountChange = (method, amount) => {
-    const parsedAmount = parseFloat(amount) || 0;  // Парсим введённое значение в число
+    console.log(amount);
+    const parsedAmount = amount || 0;  // Парсим введённое значение в число
   
     setPaymentAmounts((prevAmounts) => ({
       ...prevAmounts,
@@ -192,7 +192,8 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
   };
 
   const handleMixedPaymentValidation = () => {
-    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;  // Парсим сумму наличными
+    console.log(paymentAmounts['Наличный'])
+    const cashAmount = paymentAmounts['Наличный'] || 0;  // Парсим сумму наличными
     if (cashAmount >= totalToPay) {
       Alert.alert(
         'Предупреждение',
@@ -214,7 +215,8 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
     const paymentMethodId = paymentMethods.find((method) => method.name === selectedPaymentMethod)?.id;
   
     // Логика для обработки суммы наличных
-    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;  // Парсим сумму наличными
+    console.log(paymentAmounts['Наличный'])
+    const cashAmount = paymentAmounts['Наличный'] || 0;  // Парсим сумму наличными
     const totalSum = totalToPay;  // Общая сумма услуг
   
     // Формируем тело запроса
@@ -254,7 +256,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
   
 
   const handleCashAmountConfirm = async () => {
-    const cashAmount = parseFloat(paymentAmounts['Наличный']) || 0;
+    const cashAmount = paymentAmounts['Наличный'] || 0;
   
     try {
       if (selectedPaymentMethod === 'Наличный' && cashAmount < totalToPay) {

@@ -273,7 +273,8 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       const salaryPercentage = 0.4; // 40%
   
       const priceWithoutCurrency = selectedService.price.replace(' тенге', '');
-      const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? parseFloat(priceWithoutCurrency) : 0;
+      console.log(priceWithoutCurrency);
+      const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? priceWithoutCurrency : 0;
   
       const calculatedSalary = (validPrice * salaryPercentage).toFixed(2);
       setSalary(calculatedSalary); // Устанавливаем рассчитанную зарплату
@@ -660,8 +661,8 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       
-      // Добавляем проверку перед использованием parseFloat
-      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : 0;
+      console.log(salary);
+      const validSalary = salary && !isNaN(salary) ? salary : 0;
   
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Salary/createsalarysetting', {
         method: 'POST',
@@ -839,8 +840,8 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     setSelectedService(service);
     const priceWithoutCurrency = service.price.replace(' тенге', '');
     
-    // Добавляем проверку перед использованием parseFloat
-    const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? parseFloat(priceWithoutCurrency) : 0;
+    console.log(priceWithoutCurrency);
+    const validPrice = priceWithoutCurrency && !isNaN(priceWithoutCurrency) ? priceWithoutCurrency : 0;
     setEditedPrice(validPrice.toString()); // Преобразование обратно в строку
     setModalVisible(false);
     setUserModalVisible(true);
@@ -856,8 +857,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       
       // Преобразование строки в число с проверкой
-      const priceWithoutCurrency = editedPrice && !isNaN(editedPrice) ? parseFloat(editedPrice) : 0;
-      const validSalary = salary && !isNaN(salary) ? parseFloat(salary) : 0;
+      console.log(editedPrice);
+      const priceWithoutCurrency = editedPrice && !isNaN(editedPrice) ? editedPrice : 0;
+      console.log(salary);
+      const validSalary = salary && !isNaN(salary) ? salary : 0;
   
       const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashService/CreateWashService', {
         method: 'POST',
@@ -1319,8 +1322,8 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
             placeholderTextColor={activeColors.tint}
           />
           <StyledText style={styles.modalSubtitle}>
-            {salary && parseFloat(salary) < 100 && selectedService
-              ? `Мастер с этой услуги будет получать ${(parseFloat(selectedService.price) * (parseFloat(salary) / 100)).toFixed(2)} тенге`
+            { salary && salary < 100 && selectedService
+              ? `Мастер с этой услуги будет получать ${(selectedService.price * (salary / 100)).toFixed(2)} тенге`
               : `Мастер с этой услуги будет получать ${salary} тенге`}
           </StyledText>
 
