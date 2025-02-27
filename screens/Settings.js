@@ -6,6 +6,7 @@ import StyledText from "../components/texts/StyledText";
 import SettingsItem from "../components/settings/SettingsItem";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import getEnvVars from './config';
 
 const SettingsScreen = ({ navigation }) => {
   const { theme, updateTheme } = useContext(ThemeContext);
@@ -18,6 +19,9 @@ const SettingsScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [userRole, setUserRole] = useState(null); // Состояние для роли пользователя
+  const [isFullNameModalVisible, setIsFullNameModalVisible] = useState(false);
+  const { apiUrl } = getEnvVars();
+
   useEffect(() => {
     const fetchUserRole = async () => {
         const role = await AsyncStorage.getItem('role_user_avtosat');
@@ -54,14 +58,21 @@ const SettingsScreen = ({ navigation }) => {
         throw new Error('Authentication token is not available.');
       }
 
-      const userResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/profile/getprofileinfo', {
+      const userResponse = await fetch(`${apiUrl}/api/profile/getprofileinfo`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      const organizationResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/organization/getsubscriptionorganization', {
+      const userFullNameResponse = await fetch(`${apiUrl}/api/Authenticate/CheckUserFullName`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const organizationResponse = await fetch(`${apiUrl}/api/organization/getsubscriptionorganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -71,6 +82,9 @@ const SettingsScreen = ({ navigation }) => {
       const userData = await userResponse.json();
       const organizationData = await organizationResponse.json();
 
+      if (userFullNameResponse.status === 204) {
+        setIsFullNameModalVisible(true);
+      }
       if (userResponse.ok && organizationResponse.ok) {
         setUserInfo(userData);
         setOrganizationInfo(organizationData);
@@ -89,7 +103,7 @@ const SettingsScreen = ({ navigation }) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       console.log(password);
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Organization/ConfirmRights/?password=${password}`, {
+      const response = await fetch(`${apiUrl}/api/Organization/ConfirmRights/?password=${password}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -100,6 +114,7 @@ const SettingsScreen = ({ navigation }) => {
         await handleLogout();
         Alert.alert("Успех", "Пароль подтвержден. Пожалуйста, войдите снова.");
       } else {
+        console.log(response);
         Alert.alert("Ошибка", "Не верный пароль организации.");
       }
     } catch (error) {
@@ -114,7 +129,7 @@ const SettingsScreen = ({ navigation }) => {
   const handleDeleteAccount = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Authenticate/DeleteUser/?id=${userInfo.id}`, {
+      const response = await fetch(`${apiUrl}/api/Authenticate/DeleteUser/?id=${userInfo.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -169,6 +184,43 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
 
+        <Modal
+  animationType="slide"
+  transparent={true}
+  visible={isFullNameModalVisible}
+  onRequestClose={() => setIsFullNameModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={[styles.modalView, { backgroundColor: activeColors.primary }]}>
+      <StyledText style={[styles.modalTitle, { color: activeColors.text }]}>
+        Пожалуйста, заполните ваше ФИО
+      </StyledText>
+      <TouchableOpacity
+        onPress={() => {
+          setIsFullNameModalVisible(false);
+          navigation.navigate('ProfileEdit'); // Навигация к экрану редактирования профиля
+        }}
+        style={[styles.confirmButton, { backgroundColor: activeColors.accent }]}
+      >
+        <StyledText style={{ color: activeColors.primary, fontSize: 18 }}>
+          Заполнить ФИО
+        </StyledText>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => setIsFullNameModalVisible(false)}
+        style={[styles.cancelButton, { backgroundColor: activeColors.secondary }]}
+      >
+        <StyledText style={{ color: activeColors.text, fontSize: 18 }}>
+          Отмена
+        </StyledText>
+      </TouchableOpacity>
+    </View>
+  </View>
+  </Modal>
+
+
+
+
         {userInfo && (
           <View style={styles.section}>
             <SettingsItem label="ФИО">
@@ -177,8 +229,8 @@ const SettingsScreen = ({ navigation }) => {
             <SettingsItem label="Номер телефона">
               <StyledText>{userInfo.phoneNumber || "Нет данных"}</StyledText>
             </SettingsItem>
-            <SettingsItem label="Дата регистрации">
-              <StyledText>{new Date(userInfo.dateOfCreated).toLocaleDateString()}</StyledText>
+            <SettingsItem label="Роль:">
+              <StyledText>{userRole}</StyledText>
             </SettingsItem>
           </View>
         )}
@@ -188,6 +240,9 @@ const SettingsScreen = ({ navigation }) => {
           <View style={styles.section}>
             <SettingsItem label="Организация">
               <StyledText>{organizationInfo.organization.fullName || "Нет данных"}</StyledText>
+            </SettingsItem>
+            <SettingsItem label="БИН/ИИН">
+              <StyledText>{organizationInfo.organization.number || "Нет данных"}</StyledText>
             </SettingsItem>
             <SettingsItem label="Дата начала подписки">
               <StyledText>{new Date(organizationInfo.dateOfCreated).toLocaleDateString()}</StyledText>

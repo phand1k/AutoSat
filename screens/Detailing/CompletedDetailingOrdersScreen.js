@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
-import { SafeAreaView, Button, View, TextInput, FlatList, TouchableOpacity, Share, StyleSheet, Text, Image, Modal, ScrollView, Alert, RefreshControl, ActivityIndicator, Dimensions } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, Button, View, TextInput, FlatList, Animated, TouchableOpacity, Share, StyleSheet, Text, Image, Modal, ScrollView, Alert, RefreshControl, ActivityIndicator, Dimensions } from "react-native";
+import { Ionicons, MaterialIcons  } from '@expo/vector-icons';
 import { ThemeContext } from "../../context/ThemeContext";
 import { colors } from "../../config/theme";
 import StyledText from "../../components/texts/StyledText";
@@ -10,13 +10,16 @@ import { ru } from 'date-fns/locale';
 import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
 import DateRangePicker from "../../components/DateRangePicker";
 import { format } from 'date-fns';
+import LottieView from 'lottie-react-native'; // Для анимации пустого списка
+import getEnvVars from '../config';
+
 
 const initialLayout = { width: Dimensions.get('window').width };
 
 const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
-
+  const { apiUrl } = getEnvVars();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('');
   const [orders, setOrders] = useState([]);
@@ -35,7 +38,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [dateRange, setDateRange] = useState('');
-  
+  const fadeAnim = useState(new Animated.Value(0))[0]; // Для анимации появления
   const [lastSelectedOrderId, setLastSelectedOrderId] = useState(null);
 
   const [index, setIndex] = useState(0);
@@ -45,15 +48,19 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   ]);
 
   useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true
+    }).start();
     const today = new Date();
   const formattedStartDate = format(today, "yyyy-MM-dd'T'00:00:00");
   const formattedEndDate = format(today, "yyyy-MM-dd'T'23:59:59");
-  setStartDate(formattedStartDate);
-  setEndDate(formattedEndDate);
-  setDateRange(`${format(today, 'dd.MM.yyyy')} - ${format(today, 'dd.MM.yyyy')}`);
+  setDateRange(`${format(formattedStartDate, 'dd.MM.yyyy')} - ${format(formattedEndDate, 'dd.MM.yyyy')}`);
     fetchCompletedOrders();
     fetchTransactions();
   }, [startDate, endDate]);
+  
   const getInitialLetters = (brand) => {
     return brand && brand.length >= 3 ? brand.substring(0, 3).toUpperCase() : brand.toUpperCase();
   };
@@ -70,7 +77,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
       const formattedStartDate = startDate ? format(parseISO(startDate), "yyyy-MM-dd'T'00:00:00") : null;
       const formattedEndDate = endDate ? format(addMinutes(addHours(parseISO(endDate), 23), 59), "yyyy-MM-dd'T'HH:mm:ss") : null;
   
-      const url = new URL('https://avtosat-001-site1.ftempurl.com/api/Transaction/GetAllDetailingOrderTransactions');
+      const url = new URL(`${apiUrl}/api/Transaction/GetAllDetailingOrderTransactions`);
       if (formattedStartDate && formattedEndDate) {
         url.searchParams.append('dateOfStart', formattedStartDate);
         url.searchParams.append('dateOfEnd', formattedEndDate);
@@ -82,7 +89,8 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
           'Authorization': `Bearer ${token}`,
         },
       });
-  
+      console.log('Отправляемый URL:', url.toString());
+
       if (!response.ok) {
         throw new Error(`Не удалось получить транзакции. HTTP статус ${response.status}`);
       }
@@ -127,7 +135,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
     let totalAmount = 0;
     let cashAmount = 0;
     let nonCashAmount = 0;
-  
+    let mixedPayment = 0;
     transactions.forEach(transaction => {
       totalAmount += transaction.summ;
       if (transaction.paymentMethod && transaction.paymentMethod.name === 'Наличный') {
@@ -135,111 +143,123 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
       } else if (transaction.paymentMethod && transaction.paymentMethod.name === 'Безналичный') {
         nonCashAmount += transaction.summ;
       }
+      else if (transaction.paymentMethod && transaction.paymentMethod.name === 'Смешанная оплата'){
+        mixedPayment += transaction.summ;
+      }
     });
   
-    return { totalAmount, cashAmount, nonCashAmount };
+    return { totalAmount, cashAmount, nonCashAmount, mixedPayment };
   };
   
   
 
 
-const fetchCompletedOrders = async () => {
-  try {
-    setRefreshing(true);
-    const token = await AsyncStorage.getItem('access_token_avtosat');
-    
-    // Форматирование дат
-    const formattedStartDate = startDate ? format(parseISO(startDate), "yyyy-MM-dd'T'00:00:00") : null;
-    const formattedEndDate = endDate ? format(addMinutes(addHours(parseISO(endDate), 23), 59), "yyyy-MM-dd'T'HH:mm:ss") : null;
-
-    // Формирование URL с параметрами дат
-    const url = new URL('https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/AllCompletedDetailingOrders');
-    if (formattedStartDate && formattedEndDate) {
-      url.searchParams.append('dateOfStart', formattedStartDate);
-      url.searchParams.append('dateOfEnd', formattedEndDate);
-    }
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Authorization': `Bearer ${token}`
+  const fetchCompletedOrders = async () => {
+    try {
+      setRefreshing(true);
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      
+      // Форматирование дат
+      const formattedStartDate = startDate ? format(parseISO(startDate), "yyyy-MM-dd'T'00:00:00") : null;
+      const formattedEndDate = endDate ? format(addMinutes(addHours(parseISO(endDate), 23), 59), "yyyy-MM-dd'T'HH:mm:ss") : null;
+  
+      // Формирование URL с параметрами дат
+      const url = new URL(`${apiUrl}/api/DetailingOrder/AllCompletedDetailingOrders`);
+      if (formattedStartDate && formattedEndDate) {
+        url.searchParams.append('dateOfStart', formattedStartDate);
+        url.searchParams.append('dateOfEnd', formattedEndDate);
       }
-    });
-
-    const data = await response.json();
-    
-    if (response.status === 403) {
-      Alert.alert('Истекла подписка', 'Истек срок действия подписки');
-    }
-    if (!data || !data.$values) {
-      throw new Error('Invalid data structure');
-    }
-
-    const idMap = {};
-
-    data.$values.forEach(item => {
-      idMap[item.$id] = item;
-      if (item.car) idMap[item.car.$id] = item.car;
-      if (item.modelCar) idMap[item.modelCar.$id] = item.modelCar;
-    });
-
-    const resolveReferences = (obj) => {
-      if (obj && obj.$ref) {
-        return resolveReferences(idMap[obj.$ref]);
-      }
-      if (typeof obj === 'object') {
-        for (let key in obj) {
-          if (obj.hasOwnProperty(key)) {
-            obj[key] = resolveReferences(obj[key]);
-          }
-        }
-      }
-      return obj;
-    };
-
-    const orders = await Promise.all(data.$values.map(async (order) => {
-      const resolvedOrder = resolveReferences(order);
-      const car = resolvedOrder.car || {};
-      const modelCar = resolvedOrder.modelCar || {};
-
-      const sumResponse = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
+  
+      const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!sumResponse.ok) {
-        throw new Error(`HTTP error! status: ${sumResponse.status}`);
+  
+      const data = await response.json();
+      
+      if (response.status === 403) {
+        Alert.alert('Истекла подписка', 'Истек срок действия подписки');
       }
-      const sum = await sumResponse.json();
-
-      return {
-        id: resolvedOrder.id,
-        name: `${car.name || 'Неизвестная марка машины'} ${modelCar.name || 'Неизвестная модель'}`,
-        description: `${resolvedOrder.carNumber}`,
-        brand: car.name || 'Неизвестно',
-        model: modelCar.name || 'Неизвестно',
-        licensePlate: resolvedOrder.carNumber,
-        createdAt: resolvedOrder.dateOfCreated,
-        timeAgo: formatDistanceToNow(parseISO(resolvedOrder.dateOfCreated), { locale: ru }),
-        imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
-        totalServices: `${sum} тенге`
+      if (!data || !data.$values) {
+        throw new Error('Invalid data structure');
+      }
+  
+      const idMap = {};
+  
+      data.$values.forEach(item => {
+        idMap[item.$id] = item;
+        if (item.car) idMap[item.car.$id] = item.car;
+        if (item.modelCar) idMap[item.modelCar.$id] = item.modelCar;
+      });
+  
+      const resolveReferences = (obj) => {
+        if (obj && obj.$ref) {
+          return resolveReferences(idMap[obj.$ref]);
+        }
+        if (typeof obj === 'object') {
+          for (let key in obj) {
+            if (obj.hasOwnProperty(key)) {
+              obj[key] = resolveReferences(obj[key]);
+            }
+          }
+        }
+        return obj;
       };
-    }));
-
-    setOrders(orders);
-    setOriginalOrders(orders);
-    setRefreshing(false);
-  } catch (error) {
-    console.error(error);
-    setRefreshing(false);
-  }
-};
+  
+      const orders = await Promise.all(data.$values.map(async (order) => {
+        const resolvedOrder = resolveReferences(order);
+        const car = resolvedOrder.car || {};
+        const modelCar = resolvedOrder.modelCar || {};
+  
+        const sumResponse = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!sumResponse.ok) {
+          throw new Error(`HTTP error! status: ${sumResponse.status}`);
+        }
+        const sum = await sumResponse.json();
+  
+        // Получаем информацию о платеже
+        const paymentResponse = await fetch(`${apiUrl}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${resolvedOrder.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const paymentInfo = paymentResponse.ok ? await paymentResponse.json() : null;
+  
+        return {
+          id: resolvedOrder.id,
+          name: `${car.name || 'Неизвестная марка машины'} ${modelCar.name || 'Неизвестная модель'}`,
+          description: `${resolvedOrder.carNumber}`,
+          brand: car.name || 'Неизвестно',
+          model: modelCar.name || 'Неизвестно',
+          licensePlate: resolvedOrder.carNumber,
+          createdAt: resolvedOrder.dateOfCreated,
+          timeAgo: formatDistanceToNow(parseISO(resolvedOrder.dateOfCreated), { locale: ru }),
+          imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
+          totalServices: `${sum} тенге`,
+          paymentMethod: paymentInfo ? paymentInfo.paymentMethod.name : 'Неизвестно'
+        };
+      }));
+  
+      setOrders(orders);
+      setOriginalOrders(orders);
+      setRefreshing(false);
+    } catch (error) {
+      console.error(error);
+      setRefreshing(false);
+    }
+  };
 
 
 
   const fetchOrderDetails = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/DetailsDetailingOrder?id=${orderId}`, {
+      const response = await fetch(`${apiUrl}/api/DetailingOrder/DetailsDetailingOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -265,7 +285,7 @@ const fetchCompletedOrders = async () => {
   const fetchPaymentInfo = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${orderId}`, {
+      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -288,7 +308,7 @@ const fetchCompletedOrders = async () => {
   const fetchAssignedServices = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${orderId}`, {
+      const response = await fetch(`${apiUrl}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -304,7 +324,7 @@ const fetchCompletedOrders = async () => {
   const fetchServiceDetails = async (washServiceId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DetailsWashService?id=${washServiceId}`, {
+      const response = await fetch(`${apiUrl}/api/WashService/DetailsWashService?id=${washServiceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -371,6 +391,18 @@ const fetchCompletedOrders = async () => {
         <StyledText style={styles.itemDescription}>{item.description}</StyledText>
         <StyledText style={styles.itemTotalServices}>{item.totalServices}</StyledText>
         <StyledText style={styles.itemTimeAgo}>Создано: {item.timeAgo} назад</StyledText>
+        <View style={styles.paymentMethodContainer}>
+          {item.paymentMethod === 'Наличный' ? (
+            <MaterialIcons name="attach-money" size={20} color={activeColors.tint} />
+          ) : item.paymentMethod === 'Безналичный' ? (
+            <MaterialIcons name="credit-card" size={20} color={activeColors.tint} />
+          ) : (
+            <MaterialIcons name="payment" size={20} color={activeColors.tint} />
+          )}
+          <StyledText style={[styles.paymentMethodText, { color: activeColors.tint }]}>
+            {item.paymentMethod}
+          </StyledText>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -420,36 +452,116 @@ const fetchCompletedOrders = async () => {
     <View style={{ flex: 1, padding: 10 }}>
       {orderDetails ? (
         <ScrollView>
-          <View style={styles.detailsContainer}>
-            <StyledText style={styles.detailsText}>Марка: {orderDetails.car.name}</StyledText>
-            <StyledText style={styles.detailsText}>Модель: {orderDetails.modelCar.name}</StyledText>
-            <StyledText style={styles.detailsText}>Гос номер: {orderDetails.carNumber}</StyledText>
-            <StyledText style={styles.detailsText}>Создано: {formatDistanceToNow(parseISO(orderDetails.dateOfCreated), { locale: ru })} назад</StyledText>
-            <StyledText style={styles.detailsText}>Создал: {orderDetails.createdByFullName}</StyledText>
-            <StyledText style={styles.detailsText}>Завершил: {orderDetails.endedByFullName}</StyledText>
+          {/* Основная информация */}
+          <View style={[styles.detailsCard, { backgroundColor: activeColors.secondary }]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="car" size={24} color={activeColors.tint} />
+              <StyledText style={[styles.sectionTitle, { color: activeColors.tint }]}>Основная информация</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Марка:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.car.name}</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Модель:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.modelCar.name}</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Гос номер:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.carNumber}</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Создано:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>
+                {formatDistanceToNow(parseISO(orderDetails.dateOfCreated), { locale: ru })} назад
+              </StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Создал:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.createdByFullName}</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Завершил:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.endedByFullName}</StyledText>
+            </View>
           </View>
-          <View style={styles.detailsContainer}>
-            <StyledText style={styles.detailsTitle}>Информация о детейлинге</StyledText>
-            <StyledText style={styles.detailsText}>
-  Мастер: {orderDetails.aspNetUser ? orderDetails.aspNetUser.fullName : 'Неизвестно'}
-</StyledText>
-            <StyledText style={styles.detailsText}>Клиент: {orderDetails.phoneNumber}</StyledText>
-          </View>
+  
+          {/* Информация о платеже */}
           {paymentInfo && (
-            <View style={styles.detailsContainer}>
-              <StyledText style={styles.detailsTitle}>Информация о платеже</StyledText>
-              <StyledText style={styles.detailsText}>Способ оплаты: {paymentInfo.paymentMethod ? paymentInfo.paymentMethod.name : 'Неизвестно'}</StyledText>
-              <StyledText style={styles.detailsText}>Сумма оплаты: {paymentInfo.summ} тг</StyledText>
-              <StyledText style={styles.detailsText}>К оплате: {paymentInfo.toPay} тг</StyledText>
+            <View style={[styles.detailsCard, { backgroundColor: activeColors.secondary }]}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="cash" size={24} color={activeColors.tint} />
+                <StyledText style={[styles.sectionTitle, { color: activeColors.tint }]}>Информация о платеже</StyledText>
+              </View>
+              <View style={styles.detailsRow}>
+                <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Способ оплаты:</StyledText>
+                <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>
+                  {paymentInfo.paymentMethod ? paymentInfo.paymentMethod.name : 'Неизвестно'}
+                </StyledText>
+              </View>
+              <View style={styles.detailsRow}>
+                <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Сумма оплаты:</StyledText>
+                <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{paymentInfo.summ} тг</StyledText>
+              </View>
+              <View style={styles.detailsRow}>
+                <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>К оплате:</StyledText>
+                <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{paymentInfo.toPay} тг</StyledText>
+              </View>
             </View>
           )}
+  
+          {/* Информация о клиенте */}
+          <View style={[styles.detailsCard, { backgroundColor: activeColors.secondary }]}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="person" size={24} color={activeColors.tint} />
+              <StyledText style={[styles.sectionTitle, { color: activeColors.tint }]}>Информация о клиенте</StyledText>
+            </View>
+            <View style={styles.detailsRow}>
+              <StyledText style={[styles.detailsLabel, { color: activeColors.tint }]}>Клиент:</StyledText>
+              <StyledText style={[styles.detailsText, { color: activeColors.tint }]}>{orderDetails.phoneNumber}</StyledText>
+            </View>
+          </View>
         </ScrollView>
       ) : (
         <StyledText style={styles.noSelectionText}>Выберите заказ-наряд для просмотра подробностей</StyledText>
       )}
     </View>
   );
-
+  const handlePeriodSelect = (period) => {
+    const today = new Date();
+    let startDate, endDate;
+  
+    switch (period) {
+      case 'today':
+        startDate = format(today, "yyyy-MM-dd'T'00:00:00");
+        endDate = format(today, "yyyy-MM-dd'T'23:59:59");
+        break;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        startDate = format(yesterday, "yyyy-MM-dd'T'00:00:00");
+        endDate = format(yesterday, "yyyy-MM-dd'T'23:59:59");
+        break;
+      case 'week':
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        startDate = format(startOfWeek, "yyyy-MM-dd'T'00:00:00");
+        endDate = format(today, "yyyy-MM-dd'T'23:59:59");
+        break;
+      case 'month':
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        startDate = format(startOfMonth, "yyyy-MM-dd'T'00:00:00");
+        endDate = format(today, "yyyy-MM-dd'T'23:59:59");
+        break;
+      default:
+        startDate = null;
+        endDate = null;
+    }
+  
+    setStartDate(startDate);
+    setEndDate(endDate);
+    setDateRange(`${format(parseISO(startDate), 'dd.MM.yyyy')} - ${format(parseISO(endDate), 'dd.MM.yyyy')}`);
+  };
   const renderAssignedServices = () => (
     <View style={styles.assignedServiceListContainer}>
       <ScrollView style={styles.assignedServiceList}>
@@ -462,7 +574,7 @@ const fetchCompletedOrders = async () => {
     orderDetails: renderOrderDetails,
     assignedServices: renderAssignedServices,
   });
-  const { totalAmount, cashAmount, nonCashAmount } = calculateTotals();
+  const { totalAmount, cashAmount, nonCashAmount, mixedPayment } = calculateTotals();
   return (
     <SafeAreaView style={[{ backgroundColor: activeColors.primary }, styles.container]}>
       {renderServiceDetailsModal()}
@@ -478,12 +590,47 @@ const fetchCompletedOrders = async () => {
         />
       </View>
       <View style={[styles.summaryContainer, { backgroundColor: activeColors.secondary }]}>
-    <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} тенге</Text>
-    <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} тенге</Text>
-    <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} тенге</Text>
+        
+    <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} ₸</Text>
+    <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} ₸</Text>
+    <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} ₸</Text>
+    <Text style={[styles.summaryText, { color: activeColors.text }]}>Смешанная оплата: {mixedPayment} ₸</Text>
     {dateRange && <Text style={[styles.summaryText, { color: activeColors.text }]}>Выбранный период: {dateRange}</Text>}
+    <TouchableOpacity
+    style={styles.filterButton}
+    onPress={() => setPickerVisible(true)}
+>
+    <Ionicons name="calendar-outline" size={24} color={activeColors.primary} />
+    <Text style={styles.filterButtonText}>Фильтр</Text>
+</TouchableOpacity>
 </View>
-<Button title="Выбрать даты" onPress={() => setPickerVisible(true)} />
+<View style={styles.periodButtonsContainer}>
+  <TouchableOpacity
+    style={[styles.periodButton, { backgroundColor: activeColors.secondary }]}
+    onPress={() => handlePeriodSelect('today')}
+  >
+    <Text style={[styles.periodButtonText, { color: activeColors.tint }]}>Сегодня</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.periodButton, { backgroundColor: activeColors.secondary }]}
+    onPress={() => handlePeriodSelect('yesterday')}
+  >
+    <Text style={[styles.periodButtonText, { color: activeColors.tint }]}>Вчера</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.periodButton, { backgroundColor: activeColors.secondary }]}
+    onPress={() => handlePeriodSelect('week')}
+  >
+    <Text style={[styles.periodButtonText, { color: activeColors.tint }]}>Неделя</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.periodButton, { backgroundColor: activeColors.secondary }]}
+    onPress={() => handlePeriodSelect('month')}
+  >
+    <Text style={[styles.periodButtonText, { color: activeColors.tint }]}>Месяц</Text>
+  </TouchableOpacity>
+</View>
+
 <Modal visible={isPickerVisible} animationType="slide">
     <DateRangePicker
         onSave={({ startDate, endDate }) => {
@@ -503,15 +650,28 @@ const fetchCompletedOrders = async () => {
         placeholderTextColor={activeColors.tint}
         clearButtonMode="while-editing"
       />
-      <FlatList
-        data={orders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item, index) => index.toString()}
-        style={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+      <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+        {orders.length === 0 ? (
+          <View style={styles.emptyContainer}>
+                                <LottieView
+                                    source={require('../../assets/service-not-found.json')}
+                                    autoPlay
+                                    loop
+                                    style={{ width: 300, height: 300 }}
+                                />
+                                <Text style={styles.emptyText}>Данные не найдены</Text>
+                            </View>
+        ) : (
+          <FlatList
+            data={orders}
+            renderItem={renderOrderItem}
+            keyExtractor={(item) => item.id.toString()}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          />
+        )}
+      </Animated.View>
       {selectedOrder && (
         <Modal
           animationType="slide"
@@ -524,10 +684,6 @@ const fetchCompletedOrders = async () => {
               <ActivityIndicator size="large" color={activeColors.tint} />
             ) : (
               <>
-                <View style={styles.modalHeader}>
-                  <StyledText style={styles.modalTitle}>{selectedOrder.licensePlate}</StyledText>
-                  <StyledText style={styles.modalSubtitle}>{selectedOrder.brand} {selectedOrder.model}</StyledText>
-                </View>
                 <TabView
                   navigationState={{ index, routes }}
                   renderScene={renderScene}
@@ -632,6 +788,19 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 5,
   },
+  periodButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+  },
+  periodButton: {
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  periodButtonText: {
+    fontSize: 14,
+  },
   modalHeader: {
     marginBottom: 20,
     alignItems: 'center',
@@ -697,6 +866,16 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
   },
+  detailsCard: {
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
   segmentedControl: {
     marginVertical: 20,
   },
@@ -721,6 +900,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   summaryContainer: {
     padding: 20,
     borderTopWidth: 1,
@@ -742,6 +926,51 @@ summaryText: {
     borderWidth: 0.5,
     borderColor: 'blue',
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  detailsLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  detailsText: {
+    fontSize: 14,
+  },
+  noSelectionText: {
+    fontSize: 16,
+    color: '#aaa',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    backgroundColor: '#007bff',
+    marginVertical: 10,
+    alignSelf: 'flex-end',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5, // Для Android
+},
+filterButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: 'white',
+    fontWeight: 'bold',
+},
   shareButton: {
     position: 'absolute',
     right: 10,
@@ -755,6 +984,18 @@ summaryText: {
     alignItems: 'center',
     marginRight: 20,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20
+},
+emptyText: {
+    marginTop: 20,
+    fontSize: 18,
+    color: '#888',
+    textAlign: 'center'
+},
   brandText: {
     fontSize: 22,
     color: '#fff',

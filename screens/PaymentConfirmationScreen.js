@@ -3,12 +3,13 @@ import { View, Text, TouchableOpacity, FlatList, Modal, StyleSheet } from 'react
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import StyledText from '../components/texts/StyledText';
+import getEnvVars from './config';
 
 const PaymentConfirmationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { washOrderId, orderTotal } = route.params;
-
+  const { apiUrl } = getEnvVars();
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
@@ -19,7 +20,7 @@ const PaymentConfirmationScreen = () => {
   const fetchPaymentMethods = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllPaymentMethods', {
+      const response = await fetch(`${apiUrl}/api/Director/GetAllPaymentMethods`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -34,7 +35,7 @@ const PaymentConfirmationScreen = () => {
   const completeWashOrder = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/director/CompleteWashOrder/?id=${washOrderId}`, {
+      const response = await fetch(`${apiUrl}/api/director/CompleteWashOrder/?id=${washOrderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

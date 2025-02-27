@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Modal, SafeAreaView, ActivityIndicator, TouchableWithoutFeedback, Keyboard, Dimensions, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Image, Alert, Modal, SafeAreaView, ActivityIndicator, Animated, TouchableWithoutFeedback, Keyboard, Dimensions, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -7,10 +7,24 @@ import { ThemeContext } from "../context/ThemeContext";
 import { colors } from "../config/theme";
 import StyledText from "../components/texts/StyledText";
 import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
+import getEnvVars from './config';
 
+const { apiUrl } = getEnvVars();
 const initialLayout = { width: Dimensions.get('window').width };
-
+const scaleValue = new Animated.Value(1);
 const CartScreen = () => {
+  const animatePress = () => {
+    Animated.spring(scaleValue, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+  
   const navigation = useNavigation();
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
@@ -118,7 +132,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/service/GetAllServices', {
+      const response = await fetch(`${apiUrl}/api/service/GetAllServices`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,7 +163,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/userrole/GetUsersWithRoles', {
+      const response = await fetch(`${apiUrl}/api/userrole/GetUsersWithRoles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,7 +193,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/userrole/GetRoles', {
+      const response = await fetch(`${apiUrl}/api/userrole/GetRoles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -205,7 +219,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/director/deleteuser/?id=${id}`, {
+      const response = await fetch(`${apiUrl}/api/director/deleteuser/?id=${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -216,7 +230,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error(`Failed to delete user. HTTP status ${response.status}`);
       }
 
-      Alert.alert("Success", "Аккаунт пользователя успешно удален");
+      Alert.alert("Удалено✅", "Аккаунт пользователя успешно удален");
       setUsers(users.filter(user => user.userId !== id));
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -231,7 +245,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/service/deleteservice/?id=${id}`, {
+      const response = await fetch(`${apiUrl}/api/service/deleteservice/?id=${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -242,7 +256,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error(`Failed to delete service. HTTP status ${response.status}`);
       }
 
-      Alert.alert("Success", "Услуга успешно удалена");
+      Alert.alert("Удалено✅", "Услуга успешно удалена");
       setServices(services.filter(service => service.id !== id));
     } catch (error) {
       console.error('Error deleting service:', error);
@@ -258,7 +272,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/UserRole/EditUserRole?userId=${selectedUser.userId}&roleId=${selectedRole}`, {
+        const response = await fetch(`${apiUrl}/api/UserRole/EditUserRole?userId=${selectedUser.userId}&roleId=${selectedRole}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -269,7 +283,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
           throw new Error(`Failed to update user role. HTTP status ${response.status}`);
         }
 
-        Alert.alert("Success", "Роль пользователя успешно обновлена");
+        Alert.alert("Обновлено✅", "Роль пользователя успешно обновлена");
         const updatedUsers = users.map(user =>
           user.userId === selectedUser.userId ? { ...user, roles: { $values: [roles.find(role => role.id === selectedRole).name] } } : user
         );
@@ -312,7 +326,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Токен аутентификации недоступен.');
       }
   
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Service/ChangePrice?serviceId=${selectedService.id}&newPrice=${newPrice}`, {
+      const response = await fetch(`${apiUrl}/api/Service/ChangePrice?serviceId=${selectedService.id}&newPrice=${newPrice}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -351,7 +365,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error('Authentication token is not available.');
       }
   
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/service/CreateService', {
+      const response = await fetch(`${apiUrl}/api/service/CreateService`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -365,7 +379,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         throw new Error(`Failed to create service. HTTP status ${response.status}`);
       }
   
-      Alert.alert("Success", "Услуга успешно создана");
+      Alert.alert("Создано✅", "Услуга успешно создана");
       setModalVisible(false);
       setServiceName('');
       setPrice('');
@@ -380,48 +394,61 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
   
 
   const renderServiceItem = ({ item }) => (
-    <TouchableOpacity onPress={() => openPriceModal(item)} style={styles.addIconContainer}>
-       <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
+    <TouchableOpacity 
+      onPress={() => {
+        animatePress();
+        openPriceModal(item);
+      }}
+      style={[styles.itemContainer, { 
+        backgroundColor: activeColors.secondary, 
+        transform: [{ scale: scaleValue }] 
+      }]}
+    >
       <View style={styles.brandContainer}>
         <Text style={styles.brandText}>{getInitialLetters(item.name)}</Text>
       </View>
       <View style={styles.orderDetails}>
         <StyledText style={styles.itemName}>{item.name}</StyledText>
         <StyledText style={styles.itemDescription}>{item.description}</StyledText>
-        <StyledText style={styles.itemPrice}>{item.price}тенге</StyledText>
+        <StyledText style={styles.itemPrice}>{item.price}₸</StyledText>
       </View>
       {userRole !== 'Мастер' && (
         <TouchableOpacity onPress={() => handleConfirmDeleteService(item.id)} style={styles.addIconContainer}>
-        <Ionicons name="trash-outline" size={30} color="red" />
-      </TouchableOpacity>
-            )}
-      
-    </View>
-    </TouchableOpacity>
-  );
-
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('UserDetail', { user: item })}>
-      <View style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}>
-        <View style={styles.orderDetails}>
-          <StyledText style={styles.itemName}>{item.userName.trim() || 'Без имени'}</StyledText>
-          <StyledText style={styles.itemDescription}>Роль: {item.roles.$values.join(', ') || 'Нет роли'}</StyledText>
-          <StyledText style={styles.itemPhoneNumber}>Телефон: {item.phoneNumber || 'Не указан'}</StyledText>
-        </View>
-        {userRole !== 'Мастер' && (
-          <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
           <Ionicons name="trash-outline" size={30} color="red" />
         </TouchableOpacity>
-            )}
-        
-        <TouchableOpacity onPress={() => { 
-          setSelectedUser(item); 
-          setSelectedRole(item.roles.$values[0] || '');
-          setUserModalVisible(true); 
-        }} style={styles.addIconContainer}>
-          <Ionicons name="create-outline" size={30} color="blue" />
-        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+  
+
+  const renderUserItem = ({ item }) => (
+    <TouchableOpacity 
+      onPress={() => {
+        animatePress();
+        navigation.navigate('UserDetail', { user: item });
+      }}
+      style={[styles.itemContainer, { 
+        backgroundColor: activeColors.secondary, 
+        transform: [{ scale: scaleValue }] 
+      }]}
+    >
+      <View style={styles.orderDetails}>
+        <StyledText style={styles.itemName}>{item.userName.trim() || 'Без имени'}</StyledText>
+        <StyledText style={styles.itemDescription}>Роль: {item.roles.$values.join(', ') || 'Нет роли'}</StyledText>
+        <StyledText style={styles.itemPhoneNumber}>Телефон: {item.phoneNumber || 'Не указан'}</StyledText>
       </View>
+      {userRole !== 'Мастер' && (
+        <TouchableOpacity onPress={() => handleConfirmDeleteUser(item.userId)} style={styles.addIconContainer}>
+          <Ionicons name="trash-outline" size={30} color="red" />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity onPress={() => { 
+        setSelectedUser(item); 
+        setSelectedRole(item.roles.$values[0] || '');
+        setUserModalVisible(true); 
+      }} style={styles.addIconContainer}>
+        <Ionicons name="create-outline" size={30} color="blue" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -463,7 +490,7 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
 
   const renderScene = SceneMap({
     services: () => (
-      <View style={{ flex: 1, backgroundColor: activeColors.primary }}>
+      <View style={{ flex: 1, backgroundColor: activeColors.primary, justifyContent: 'space-between' }}>
         <TextInput
           style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
           value={filter}
@@ -472,20 +499,27 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
           placeholderTextColor="#aaaaaa"
           clearButtonMode="while-editing"
         />
-        <FlatList
-          data={services}
-          renderItem={renderServiceItem}
-          keyExtractor={(item, index) => index.toString()}
-          style={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={fetchServices} />
-          }
-        />
+        {services.length === 0 ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+            <Ionicons name="cog-outline" size={60} color={activeColors.tint} />
+            <Text style={{ color: activeColors.tint, textAlign: 'center', marginTop: 20 }}>Список услуг пустой.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={services}
+            renderItem={renderServiceItem}
+            keyExtractor={(item, index) => index.toString()}
+            style={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={fetchServices} />
+            }
+          />
+        )}
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: activeColors.accent }]}
+          style={[styles.createButton, { backgroundColor: activeColors.accent, alignSelf: 'stretch' }]}
           onPress={() => setModalVisible(true)}
         >
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Добавить услугу</Text>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Добавить услугу</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -510,7 +544,9 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
         />
       </View>
     ),
-  });
+});
+
+
 
   return (
     <View style={{ flex: 1, backgroundColor: activeColors.primary }}>
@@ -667,11 +703,17 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
 
 const styles = StyleSheet.create({
   searchBox: {
-    height: 40,
+    height: 50,
     borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    margin: 10,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    marginVertical: 15,
+    fontSize: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   list: {
     flex: 1,
@@ -680,11 +722,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    marginVertical: 5,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    elevation: 2,
+    padding: 15,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   itemImage: {
     width: 50,
@@ -694,21 +740,47 @@ const styles = StyleSheet.create({
   },
   orderDetails: {
     flex: 1,
+    marginLeft: 15,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#007bff',
   },
   itemDescription: {
     fontSize: 14,
-    color: '#ccc',
-  },
-  itemPhoneNumber: {
-    fontSize: 14,
-    color: '#007bff',
+    color: '#666',
   },
   itemPrice: {
+    fontSize: 20,
+    color: '#007bff',
+    fontWeight: 'bold',
+  },
+  itemTimeAgo: {
+    fontSize: 12,
+    color: '#888',
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  readyBadge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  inProgressBadge: {
+    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+  },
+  statusText: {
+    fontSize: 14,
+    marginLeft: 5,
+    fontWeight: 'bold',
+  },
+  itemPhoneNumber: {
     fontSize: 14,
     color: '#007bff',
   },

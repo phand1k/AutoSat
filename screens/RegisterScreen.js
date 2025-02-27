@@ -17,6 +17,7 @@ import CustomButton from "../components/CustomButton";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import getEnvVars from './config';
 
 // Функция для проверки правильности номера
 const validatePhoneNumber = (phoneNumber) => {
@@ -26,6 +27,7 @@ const validatePhoneNumber = (phoneNumber) => {
 };
 
 const RegisterScreen = ({ navigation }) => {
+  const { apiUrl } = getEnvVars();
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -33,6 +35,31 @@ const RegisterScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+
+  const fetchAndSaveOrganizationType = async (token) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/organization/GetTypeOfOrganization`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization type');
+      }
+
+      const organizationType = await response.text();
+      console.log('Organization type:', organizationType);
+
+      await AsyncStorage.setItem('typeOfOrganization_avtosat', organizationType);
+    } catch (error) {
+      console.error('Error fetching organization type:', error);
+      Alert.alert('Ошибка', 'Произошла ошибка при получении типа организации');
+    }
+  };
 
   const registerForPushNotificationsAsync = async () => {
     let token;
@@ -53,7 +80,7 @@ const RegisterScreen = ({ navigation }) => {
       if (!jwtToken) {
         throw new Error('Authentication token is not available.');
       }
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Token/RegisterToken', {
+      const response = await fetch(`${apiUrl}/api/Token/RegisterToken`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -98,7 +125,7 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, '');
     try {
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Authenticate/register', {
+      const response = await fetch(`${apiUrl}/api/Authenticate/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +152,7 @@ const RegisterScreen = ({ navigation }) => {
       Alert.alert("Успех", "Регистрация прошла успешно");
 
       // Автоматический вход после регистрации
-      const loginResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/login', {
+      const loginResponse = await fetch(`${apiUrl}/api/authenticate/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +174,7 @@ const RegisterScreen = ({ navigation }) => {
       await AsyncStorage.setItem('access_token_avtosat', token);
 
       // Получение роли пользователя
-      const roleResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/GetRole', {
+      const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -163,6 +190,8 @@ const RegisterScreen = ({ navigation }) => {
       const userRole = roleData.$values[0];
       await AsyncStorage.setItem('role_user_avtosat', userRole);
 
+      await fetchAndSaveOrganizationType(token);
+      
       // Регистрация для push-уведомлений
       await registerForPushNotificationsAsync();
 
@@ -189,7 +218,7 @@ const RegisterScreen = ({ navigation }) => {
       >
         <View style={{ alignItems: "center" }}>
           <Image
-            source={require("../images/login.png")}
+            source={{ uri: 'https://autosat.kz/login.png' }}
             style={{
               height: 200,
               width: 200,

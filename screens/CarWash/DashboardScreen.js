@@ -101,7 +101,7 @@ const DashboardScreen = ({ navigation }) => {
         </View>
         <View style={styles.orderContent}>
           <Text style={styles.orderTitle}>{item.serviceName}</Text>
-          <Text style={styles.orderStatus}>Цена: {item.price} тенге</Text>
+          <Text style={styles.orderStatus}>Цена: {item.price} ₸</Text>
           <Text style={styles.orderStatus}>Машина: {item.car}</Text>
         </View>
         <TouchableOpacity style={styles.orderButton}>
@@ -178,8 +178,8 @@ const DashboardScreen = ({ navigation }) => {
 
 
       <View style={styles.summaryContainer}>
-        <Text style={[styles.summaryText, { color: activeColors.text }]}>Сумма оплат наличными: {totalCashPayments} тенге</Text>
-        <Text style={[styles.summaryText, { color: activeColors.text }]}>Сумма оплат безналом: {totalNonCashPayments} тенге</Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>Сумма оплат наличными: {totalCashPayments} ₸</Text>
+        <Text style={[styles.summaryText, { color: activeColors.text }]}>Сумма оплат безналом: {totalNonCashPayments} ₸</Text>
         <Text style={[styles.summaryText, { color: activeColors.text }]}>Количество возвратов: {totalReturns}</Text>
       </View>
 

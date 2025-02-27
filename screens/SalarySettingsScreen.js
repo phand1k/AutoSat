@@ -1,441 +1,295 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { View, FlatList, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, TextInput, RefreshControl, Image, Modal, ScrollView } from 'react-native';
-import { ThemeContext } from '../context/ThemeContext';
-import { colors } from '../config/theme';
-import { Ionicons } from '@expo/vector-icons';
-import StyledText from '../components/texts/StyledText';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import RNPickerSelect from 'react-native-picker-select';
+  import React, { useContext, useEffect, useState } from 'react';
+  import { 
+    View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, TextInput, 
+    Alert, Animated, Keyboard, TouchableWithoutFeedback, ScrollView, KeyboardAvoidingView, Platform 
+  } from 'react-native';
+  import { ThemeContext } from '../context/ThemeContext';
+  import { colors } from '../config/theme';
+  import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+  import StyledText from '../components/texts/StyledText';
+  import getEnvVars from './config';
+  import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SalarySettingsScreen = ({ navigation }) => {
-  const { theme } = useContext(ThemeContext);
-  const activeColors = colors[theme.mode];
-  const [salarySettings, setSalarySettings] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedSalarySetting, setSelectedSalarySetting] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [services, setServices] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedService, setSelectedService] = useState(null);
-  const [salary, setSalary] = useState('');
+  const predefinedMessages = [
+    { id: 1, description:"Внимание! Скидка 20%", text: "🔥 Внимание! Скидка 20% на все услуги! 🔥 Запишитесь прямо сейчас! 📞 Ваш_номер_телефона  📍 г. Шымкент, ...", icon: 'cash-outline' },
+    { id: 2, description:"Полная подготовка авто с 15% скидкой", text: "🚗 Полная подготовка авто с 15% скидкой! Только до конца недели! Запись: 📞 Ваш_номер_телефона 📍 г. Шымкент, ...", icon: 'cart-outline' },
+    { id: 3, description:"Химчистка салона с бонусом!", text: "✨ Химчистка салона с бонусом! Получите бесплатную ароматизацию! 📍 Наш адрес: г. Шымкент, ... 📞 Запись: Ваш_номер_телефона ", icon: 'card-outline' },
+    { id: 4, description:"Подарок за ваш визит! Любая услуга – и бесплатное покрытие воском!", text: "🌟 Подарок за ваш визит! Любая услуга – и бесплатное покрытие воском! 📞 Запись: Ваш_номер_телефона  📍 г. Шымкент, ...", icon: 'gift' }
+  ];
 
-  useEffect(() => {
-    fetchSalarySettings();
-    fetchUsers();
-    fetchServices();
-  }, []);
+  const SalarySettingsScreen = ({ navigation }) => {
+    const { apiUrl } = getEnvVars();
+    const { theme } = useContext(ThemeContext);
+    const activeColors = colors[theme.mode];
+    const [modalVisible, setModalVisible] = useState(false);
 
-  const fetchSalarySettings = async () => {
-    try {
-      setRefreshing(true);
-      const token = await AsyncStorage.getItem('access_token_avtosat');
-      if (!token) {
-        throw new Error('Authentication token is not available.');
+    const [message, setMessage] = useState('');
+    const [phone, setPhone] = useState('+77024574566');
+    const [address, setAddress] = useState('г. Шымкент, Дулати 183');
+    const fadeAnim = useState(new Animated.Value(0))[0];
+
+    useEffect(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
+    }, []);
+
+    const sendNewsletter = async () => {
+      if (!message.trim()) {
+        Alert.alert('Ошибка', 'Введите сообщение для рассылки');
+        return;
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Salary/GetAllSalarySettings', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch salary settings. HTTP status ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Fetched data:', data);  // Для отладки
-
-      // Resolve nested objects using $id and $ref
-      const idMap = {};
-      data.$values.forEach(item => {
-        idMap[item.$id] = item;
-        if (item.aspNetUser) idMap[item.aspNetUser.$id] = item.aspNetUser;
-        if (item.service) idMap[item.service.$id] = item.service;
-      });
-
-      const resolveReferences = (obj) => {
-        if (obj && obj.$ref) {
-          return resolveReferences(idMap[obj.$ref]);
+      try {
+        const token = await AsyncStorage.getItem('access_token_avtosat');
+        if (!token) {
+          Alert.alert('Ошибка', 'Отсутствует токен авторизации');
+          return;
         }
-        if (typeof obj === 'object') {
-          for (let key in obj) {
-            if (obj.hasOwnProperty(key)) {
-              obj[key] = resolveReferences(obj[key]);
-            }
-          }
+
+        const response = await fetch(`${apiUrl}/api/Loyalty/NewsLetter`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: message.replace('{phone}', phone).replace('{address}', address) }),
+        });
+
+        if (response.ok) {
+          Alert.alert('Успех', 'Сообщения успешно отправлены');
+          setMessage('');
+        } else {
+          Alert.alert('Ошибка', 'Не удалось отправить сообщения');
         }
-        return obj;
-      };
-
-      const resolvedData = data.$values.map(item => {
-        const resolvedItem = resolveReferences(item);
-        return {
-          id: resolvedItem.id,
-          salary: resolvedItem.salary,
-          serviceName: resolvedItem.service ? resolvedItem.service.name : undefined,
-          servicePrice: resolvedItem.service ? resolvedItem.service.price : undefined,
-          userFullName: resolvedItem.aspNetUser ? `${resolvedItem.aspNetUser.firstName} ${resolvedItem.aspNetUser.lastName} ${resolvedItem.aspNetUser.surName}` : undefined,
-          aspNetUserId: resolvedItem.aspNetUser ? resolvedItem.aspNetUser.id : null,
-          serviceId: resolvedItem.service ? resolvedItem.service.id : null,
-        };
-      });
-
-      console.log('Resolved data:', resolvedData);  // Для отладки
-      setSalarySettings(resolvedData);
-    } catch (error) {
-      console.error('Error fetching salary settings:', error);
-      Alert.alert("Error", `Failed to fetch salary settings: ${error.message}`);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllUsers', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch users. HTTP status ${response.status}`);
+      } catch (error) {
+        Alert.alert('Ошибка', 'Ошибка соединения с сервером');
+        console.error('Ошибка:', error);
       }
+    };
 
-      const data = await response.json();
-      setUsers(data.$values.map(user => ({
-        label: `${user.firstName} ${user.lastName} ${user.surName}`,
-        value: user.id,
-      })));
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      Alert.alert("Error", `Failed to fetch users: ${error.message}`);
-    }
-  };
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <SafeAreaView style={[{ backgroundColor: activeColors.primary }, styles.container]}>
+            <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={activeColors.tint} />
+            </TouchableOpacity>
+              <StyledText style={[styles.headerTitle, { color: activeColors.tint }]}>Рассылка сообщений</StyledText>
+            </View>
 
-  const fetchServices = async () => {
-    try {
-      const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Service/GetAllServices', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+            {/* Памятка перед шаблонами */}
+            <View style={[styles.noteContainer, { backgroundColor: activeColors.secondary }]}>
+            <TouchableOpacity onPress={() => setModalVisible(true)}>
+              <Ionicons name="information-circle-outline" size={34} color={activeColors.tint} />
+              </TouchableOpacity>
+              <Text style={[styles.noteText, { color: activeColors.tint }]}>
+                Это шаблоны сообщений. Выберите подходящий шаблон, при необходимости измените номер телефона или адрес, и отправьте сообщение.
+              </Text>
+            </View>
+            
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch services. HTTP status ${response.status}`);
-      }
-
-      const data = await response.json();
-      setServices(data.$values.map(service => ({
-        label: service.name,
-        value: service.id,
-      })));
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      Alert.alert("Error", `Failed to fetch services: ${error.message}`);
-    }
-  };
-
-  const handleSearch = (text) => {
-    setFilter(text);
-    if (text === '') {
-      fetchSalarySettings();
-    } else {
-      const filteredData = salarySettings.filter(item =>
-        item.userFullName?.toLowerCase().includes(text.toLowerCase())
-      );
-      setSalarySettings(filteredData);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Salary/DeleteSalarySetting?id=${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete salary setting. HTTP status ${response.status}`);
-      }
-
-      setSalarySettings(prevSettings => prevSettings.filter(item => item.id !== id));
-      Alert.alert("Success", "Salary setting deleted successfully");
-    } catch (error) {
-      console.error('Error deleting salary setting:', error);
-      Alert.alert("Error", `Failed to delete salary setting: ${error.message}`);
-    }
-  };
-
-  const handleItemPress = (item) => {
-    setSelectedSalarySetting(item);
-    setSelectedUser(item.aspNetUserId);
-    setSelectedService(item.serviceId);
-    setSalary(item.salary.toString());
-    setModalVisible(true);
-  };
-
-  const renderSalaryItem = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.itemContainer, { backgroundColor: activeColors.secondary }]}
-      onPress={() => handleItemPress(item)}
-    >
-      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/5534/5534747.png' }} style={styles.itemImage} />
-      <View style={styles.orderDetails}>
-        <StyledText style={styles.itemDescription}>Услуга: {item.serviceName}</StyledText>
-        <StyledText style={styles.itemDescription}>Цена услуги: {item.servicePrice}тенге</StyledText>
-        <StyledText style={styles.itemInfo}>Зарплата с услуги: {item.salary}тенге</StyledText>
-        <StyledText style={styles.itemName}>Работник: {item.userFullName}</StyledText>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <SafeAreaView style={[{ backgroundColor: activeColors.primary }, styles.container]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={activeColors.tint} />
-        </TouchableOpacity>
-        <StyledText style={[styles.headerTitle, { color: activeColors.tint }]}>Настройки Зарплат</StyledText>
-        <TouchableOpacity onPress={fetchSalarySettings} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={24} color={activeColors.tint} />
-        </TouchableOpacity>
-      </View>
-      <TextInput
-        style={[styles.searchBox, { backgroundColor: activeColors.primary, borderColor: activeColors.secondary, color: activeColors.tint }]}
-        value={filter}
-        onChangeText={handleSearch}
-        placeholder="Поиск"
-        placeholderTextColor={activeColors.tint}
-        clearButtonMode="while-editing"
-      />
-      <FlatList
-        data={salarySettings}
-        renderItem={renderSalaryItem}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={fetchSalarySettings} />
-        }
-      />
-      {selectedSalarySetting && (
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-        >
-          <ScrollView contentContainerStyle={styles.modalScrollView}>
-            <View style={[styles.modalView, { backgroundColor: activeColors.primary }]}>
-              <StyledText style={styles.modalTitle}>Подробности о зарплате</StyledText>
-              <StyledText style={styles.modalSubtitle}>Услуга: {selectedSalarySetting.serviceName}</StyledText>
-              <StyledText style={styles.modalSubtitle}>Цена услуги: {selectedSalarySetting.servicePrice}тенге</StyledText>
-              <StyledText style={styles.modalSubtitle}>Работник: {selectedSalarySetting.userFullName}</StyledText>
-              <TextInput
-                style={[styles.salaryInput, { backgroundColor: activeColors.secondary, borderColor: activeColors.accent, color: activeColors.tint }]}
-                value={salary}
-                onChangeText={setSalary}
-                placeholder="Введите зарплату"
-                keyboardType="numeric"
-              />
-              <View style={styles.pickerContainer}>
-                <RNPickerSelect
-                  style={pickerSelectStyles(activeColors)}
-                  onValueChange={(value) => setSelectedUser(value)}
-                  items={users}
-                  placeholder={{
-                    label: 'Выберите работника',
-                    value: null,
-                    color: activeColors.tint,
-                  }}
-                  value={selectedUser}
-                />
-              </View>
-              <View style={styles.pickerContainer}>
-                <RNPickerSelect
-                  style={pickerSelectStyles(activeColors)}
-                  onValueChange={(value) => setSelectedService(value)}
-                  items={services}
-                  placeholder={{
-                    label: 'Выберите услугу',
-                    value: null,
-                    color: activeColors.tint,
-                  }}
-                  value={selectedService}
-                />
-              </View>
+            <ScrollView style={styles.templatesContainer}>
+              {predefinedMessages.map((item) => (
+                <TouchableOpacity 
+                  key={item.id}
+                  style={[styles.templateCard, { backgroundColor: activeColors.secondary }]} 
+                  onPress={() => setMessage(item.text)}
+                >
+                  <Ionicons name={item.icon} size={24} color={activeColors.tint} />
+                  <Text style={[styles.templateText, { color: activeColors.tint }]}>{item.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={[styles.noteContainer, { backgroundColor: activeColors.secondary }]}>
+              <Ionicons name="mail-outline" size={34} color={activeColors.tint} />
+              <Text style={[styles.noteText, { color: activeColors.tint }]}>
+                Ваше сообщение
+              </Text>
+            </View>
+            <TextInput
+              style={[styles.messageInput, { borderColor: activeColors.secondary, color: activeColors.tint }]}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Введите сообщение для рассылки"
+              placeholderTextColor={activeColors.tint}
+              multiline
+            />
+<Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: activeColors.primary }]}>
+              <Text style={[styles.modalText, { color: activeColors.tint }]}>
+                Сообщение будет отправлено всем клиентам, которые посещали ваш центр.
+              </Text>
               <TouchableOpacity
-                style={[styles.closeButton, { backgroundColor: activeColors.accent }]}
+                style={[styles.modalButton, { backgroundColor: activeColors.accent }]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={[styles.closeButtonText, { color: activeColors.primary }]}>Закрыть</Text>
+                <Text style={[styles.modalButtonText, { color: activeColors.primary }]}>Закрыть</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </Modal>
-      )}
-    </SafeAreaView>
-  );
-};
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+            <TouchableOpacity style={[styles.sendButton, { backgroundColor: activeColors.accent }]} onPress={sendNewsletter}>
+              <Text style={[styles.sendButtonText, { color: activeColors.primary }]}>📨 Отправить</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    );
+  };
 
-const pickerSelectStyles = (activeColors) => ({
-  inputIOS: {
-    color: activeColors.tint,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: activeColors.secondary,
-    borderRadius: 5,
-    backgroundColor: activeColors.primary,
-    fontSize: 16,
-  },
-  inputAndroid: {
-    color: activeColors.tint,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: activeColors.secondary,
-    borderRadius: 5,
-    backgroundColor: activeColors.primary,
-    fontSize: 16,
-  },
-  iconContainer: {
-    top: 10,
-    right: 12,
-  },
-});
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: '#F5F5F5',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 10,
+      paddingTop: 20,
+    },
+    backButton: {
+      position: 'absolute',
+      left: 10,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+    },
+    input: {
+      height: 40,
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 10,
+    },
+    messageInput: {
+      height: 100,
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 10,
+      textAlignVertical: 'top',
+    },
+    noteContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 15,
+      borderRadius: 10,
+      marginBottom: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    noteText: {
+      fontSize: 14,
+      lineHeight: 20,
+      marginLeft: 10,
+      flex: 1,
+    },
+    templatesContainer: {
+      flex: 1,
+      marginBottom: 10,
+    },
+    templateCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 15,
+      marginVertical: 5,
+      borderRadius: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    templateText: {
+      fontSize: 14,
+      marginLeft: 10,
+    },
+    sendButton: {
+      padding: 15,
+      borderRadius: 10,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    noteContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 15,
+      borderRadius: 10,
+      marginBottom: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    noteText: {
+      fontSize: 14,
+      lineHeight: 20,
+      marginLeft: 10,
+      flex: 1,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+      width: '80%',
+      padding: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    modalText: {
+      fontSize: 16,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    modalButton: {
+      padding: 10,
+      borderRadius: 5,
+      width: '100%',
+      alignItems: 'center',
+    },
+    modalButtonText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    sendButtonText: {
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+  });
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    paddingTop: 20,
-  },
-  backButton: {
-    position: 'absolute',
-    left: 10,
-  },
-  refreshButton: {
-    position: 'absolute',
-    right: 10,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  searchBox: {
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    margin: 10,
-  },
-  list: {
-    flex: 1,
-  },
-  itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    marginVertical: 5,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  itemImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  orderDetails: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  itemDescription: {
-    fontSize: 14,
-  },
-  itemInfo: {
-    fontSize: 12,
-  },
-  deleteButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    backgroundColor: 'red',
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    marginVertical: 5,
-    marginRight: 10,
-  },
-  deleteButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 70,
-    height: '100%',
-  },
-  modalView: {
-    flex: 1,
-    marginTop: 50,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    padding: 20,
-    elevation: 5,
-  },
-  modalScrollView: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  salaryInput: {
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginVertical: 10,
-  },
-  closeButton: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    fontSize: 16,
-  },
-  pickerContainer: {
-    marginVertical: 10,
-  },
-});
-
-export default SalarySettingsScreen;
+  export default SalarySettingsScreen;

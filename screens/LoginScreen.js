@@ -20,6 +20,10 @@ import { ThemeContext } from '../context/ThemeContext';
 import NetInfo from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
 import { useNavigation } from '@react-navigation/native';
+import getEnvVars from './config';
+import LottieView from 'lottie-react-native'; // Для анимации пустого списка
+import { KeyboardAvoidingView, Platform } from 'react-native';
+const { apiUrl } = getEnvVars();
 
 const LoginScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -31,8 +35,10 @@ const LoginScreen = ({ navigation }) => {
   const handleForgotPassword = () => {
     navigation.navigate('ForgotPassword');
   };
+  
   useEffect(() => {
     console.log('Login screen rendered');
+    console.log(apiUrl);
   }, []);
   const registerForPushNotificationsAsync = async () => {
     let token;
@@ -54,7 +60,7 @@ const LoginScreen = ({ navigation }) => {
         throw new Error('Authentication token is not available.');
       }
       console.log(jwtToken);
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Token/RegisterToken', {
+      const response = await fetch(`${apiUrl}/api/Token/RegisterToken`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -74,7 +80,7 @@ const LoginScreen = ({ navigation }) => {
 
   const fetchAndSaveOrganizationType = async (token) => {
     try {
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/organization/GetTypeOfOrganization', {
+      const response = await fetch(`${apiUrl}/api/organization/GetTypeOfOrganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -123,7 +129,7 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     const unmaskedPhoneNumber = currentPhoneNumber.replace(/[^\d]/g, '');
     try {
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/login', {
+      const response = await fetch(`${apiUrl}/api/authenticate/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +153,7 @@ const LoginScreen = ({ navigation }) => {
 
       // Получение роли пользователя
       console.log('Fetching user role...');
-      const roleResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/GetRole', {
+      const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -193,10 +199,19 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <KeyboardAvoidingView
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  style={{ flex: 1 }}
+>
       <SafeAreaView style={{ backgroundColor: activeColors.primary, flex: 1, justifyContent: 'center' }}>
         <View style={{ paddingHorizontal: 25 }}>
           <View style={{ alignItems: 'center' }}>
-            <Image source={require('../images/login-wash.png')} style={{ height: 200, width: 300, transform: [{ rotate: '-deg' }] }} />
+             <LottieView
+                                                source={require('../assets/login-carwash.json')}
+                                                autoPlay
+                                                loop
+                                                style={{ width: 300, height: 300 }}
+                                            />
           </View>
           <Text style={{ fontSize: 28, fontWeight: '500', color: activeColors.tint, marginBottom: 30 }}>AutoSat</Text>
           <TextInputMask
@@ -228,7 +243,7 @@ const LoginScreen = ({ navigation }) => {
           )}
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 30 }}>
             <Text style={{ color: activeColors.tint }}>Нет аккаунта? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <TouchableOpacity onPress={() => navigation.navigate('RegisterWithOutOrganization')}>
               <Text style={{ color: activeColors.accent, fontWeight: '700' }}> Зарегистрироваться </Text>
             </TouchableOpacity>
           </View>
@@ -237,6 +252,7 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };

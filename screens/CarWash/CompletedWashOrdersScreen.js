@@ -451,9 +451,9 @@
           <Text style={[styles.headerTitle, { color: activeColors.tint }]}>Помытые машины</Text>
         </View>
         <View style={[styles.summaryContainer, { backgroundColor: activeColors.secondary }]}>
-  <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} тенге</Text>
-  <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} тенге</Text>
-  <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} тенге</Text>
+  <Text style={[styles.summaryText, { color: activeColors.text }]}>Общая сумма: {totalAmount} ₸</Text>
+  <Text style={[styles.summaryText, { color: activeColors.text }]}>Наличными: {cashAmount} ₸</Text>
+  <Text style={[styles.summaryText, { color: activeColors.text }]}>Безналичный: {nonCashAmount} ₸</Text>
   {dateRange && <Text style={[styles.summaryText, { color: activeColors.text }]}>Выбранный период: {dateRange}</Text>}
 </View>
 

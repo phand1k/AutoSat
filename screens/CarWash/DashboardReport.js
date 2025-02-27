@@ -84,7 +84,7 @@ const DashboardReport = ({ visible, onClose, theme }) => {
                     <Ionicons name="cash-outline" size={40} color={activeColors.accent} />
                     <View style={styles.dashboardTextContainer}>
                       <StyledText style={styles.dashboardItemTitle}>Сумма услуг</StyledText>
-                      <StyledText style={styles.dashboardItemValue}>{dashboardData.summOfAllServices} тенге</StyledText>
+                      <StyledText style={styles.dashboardItemValue}>{dashboardData.summOfAllServices} ₸</StyledText>
                     </View>
                   </View>
                   <View style={styles.dashboardItem}>

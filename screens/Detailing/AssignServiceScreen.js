@@ -9,7 +9,9 @@ import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
 import * as Haptics from 'expo-haptics';
 import DetailingPaymentSlider from "../DetailingPaymentSlider";
 import { generateOrderPdf } from './pdfGenerator';
+import getEnvVars from '../config';
 
+const { apiUrl } = getEnvVars();
 const initialLayout = { width: Dimensions.get('window').width };
 
 const AssignServiceScreen = () => {
@@ -59,7 +61,7 @@ const AssignServiceScreen = () => {
     const fetchServicesTotal = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${selectedOrder.id}`, {
+            const response = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -75,7 +77,7 @@ const AssignServiceScreen = () => {
     const handleCompleteOrder = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
+            const response = await fetch(`${apiUrl}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -96,7 +98,7 @@ const AssignServiceScreen = () => {
     const fetchAssignedServices = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${selectedOrder.id}`, {
+            const response = await fetch(`${apiUrl}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -162,7 +164,7 @@ const AssignServiceScreen = () => {
     const fetchOrderDetails = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/DetailsDetailingOrder?id=${selectedOrder.id}`, {
+            const response = await fetch(`${apiUrl}/api/DetailingOrder/DetailsDetailingOrder?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -178,13 +180,14 @@ const AssignServiceScreen = () => {
     const fetchServices = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Service/GetAllServices', {
+            const response = await fetch(`${apiUrl}/api/Service/GetAllServices`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
             });
             const data = await response.json();
             setServices(data.$values);
+            console.log(userRole);
         } catch (error) {
             console.error(error);
             Alert.alert('Ошибка', 'Не удалось загрузить услуги.');
@@ -195,7 +198,7 @@ const AssignServiceScreen = () => {
         try {
             setIsLoading(true);
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingService/PriceListForService?serviceId=${serviceId}&carId=${selectedOrder.carId}&modelCarId=${selectedOrder.modelCarId}`, {
+            const response = await fetch(`${apiUrl}/api/DetailingService/PriceListForService?serviceId=${serviceId}&carId=${selectedOrder.carId}&modelCarId=${selectedOrder.modelCarId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -241,7 +244,7 @@ const AssignServiceScreen = () => {
     const handleAssignService = async () => {
         console.log('Назначить услугу вызвана'); // Логируем вызов функции
         if (Number(editedPrice) < 100) {
-            Alert.alert('Ошибка', 'Цена не может быть меньше 100 тенге.');
+            Alert.alert('Ошибка', 'Цена не может быть меньше 100 ₸.');
             return;
         }
 
@@ -250,7 +253,7 @@ const AssignServiceScreen = () => {
             const token = await AsyncStorage.getItem('access_token_avtosat');
             const finalPrice = selectedPrice ? selectedPrice.price : Number(editedPrice);
 
-            const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/DetailingService/CreateDetailingService', {
+            const response = await fetch(`${apiUrl}/api/DetailingService/CreateDetailingService`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -294,7 +297,7 @@ const AssignServiceScreen = () => {
                     onPress: async () => {
                         try {
                             const token = await AsyncStorage.getItem('access_token_avtosat');
-                            const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingService/DeleteWashServiceFromOrder?id=${serviceId}`, {
+                            const response = await fetch(`${apiUrl}/api/DetailingService/DeleteWashServiceFromOrder?id=${serviceId}`, {
                                 method: 'PATCH',
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -327,7 +330,7 @@ const AssignServiceScreen = () => {
                 </View>
                 <View style={styles.orderDetails}>
                     <Text style={[styles.itemName, { color: activeColors.tint }]}>{item.name}</Text>
-                    <Text style={[styles.itemPrice, { color: activeColors.tint }]}>{item.price} тенге</Text>
+                    <Text style={[styles.itemPrice, { color: activeColors.tint }]}>{item.price} ₸</Text>
                 </View>
                 <View style={styles.addIconContainer}>
                     {loadingServiceId === item.id ? (
@@ -354,7 +357,7 @@ const AssignServiceScreen = () => {
                 </View>
                 <View style={styles.orderDetails}>
                     <Text style={[styles.itemName, { color: activeColors.tint }]}>{item.serviceName}</Text>
-                    <Text style={[styles.itemPrice, { color: activeColors.tint }]}>{item.price} тенге</Text>
+                    <Text style={[styles.priceText, { color: activeColors.tint }]}>{item.price} ₸</Text>
                 </View>
                 {userRole !== 'Мастер' && (
                     <TouchableOpacity onPress={() => deleteAssignedService(item.detailingServiceId)} style={styles.addIconContainer}>
@@ -367,23 +370,45 @@ const AssignServiceScreen = () => {
 
     const renderServicesTab = () => (
         <View style={{ flex: 1, backgroundColor: activeColors.primary }}>
-            <FlatList
+            {services.length === 0 ? (
+    <View style={{ alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <Ionicons name="construct-outline" size={60} color={activeColors.tint} />
+        <Text style={{ color: activeColors.tint, textAlign: 'center', marginTop: 20 }}>Нет доступных услуг.</Text>
+        
+        <TouchableOpacity 
+            onPress={() => navigation.navigate('Список')} 
+            style={{ marginTop: 20, padding: 10, backgroundColor: activeColors.accent, borderRadius: 10 }}
+        >
+            <Text style={{ color: activeColors.primary, textAlign: 'center' }}>Создать услугу</Text>
+        </TouchableOpacity>
+    </View>
+) : (
+   <FlatList
                 data={services}
                 renderItem={renderServiceItem}
                 keyExtractor={(item) => item.id.toString()}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchServices} />}
             />
+)}
+
         </View>
     );
 
     const renderAssignedServicesTab = () => (
         <View style={{ flex: 1, backgroundColor: activeColors.primary }}>
-            <FlatList
+            {assignedServices.length === 0 ? (
+                <View style={{ alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                    <Ionicons name="clipboard-outline" size={60} color={activeColors.tint} />
+                    <Text style={{ color: activeColors.tint, textAlign: 'center', marginTop: 20 }}>На данном заказ-наряде нет назначенных услуг.</Text>
+                </View>
+            ) : (
+                <FlatList
                 data={assignedServices}
                 renderItem={renderAssignedServiceItem}
                 keyExtractor={(item) => item.detailingServiceId?.toString()}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchAssignedServices} />}
             />
+            )}
         </View>
     );
 
@@ -414,26 +439,42 @@ const AssignServiceScreen = () => {
             </View>
 
             {orderDetails ? (
-    <View style={[styles.orderDetailsHeader, { backgroundColor: activeColors.secondary }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={[styles.orderText, { color: activeColors.tint }]}>
-                Гос. номер: {orderDetails?.carNumber ?? 'Не указано'}
-            </Text>
-        </View>
-        <Text style={[styles.orderText, { color: activeColors.tint }]}>
-            Машина: {orderDetails?.car?.name ?? 'Не указано'} {orderDetails?.modelCar?.name ?? 'Не указано'}
-        </Text>
-        <Text style={[styles.orderText, { color: activeColors.tint }]}>
-            Клиент: {formatPhoneNumber(orderDetails?.phoneNumber ?? 'Не указано')}
-        </Text>
-        <Text style={[styles.orderText, { color: activeColors.tint }]}>
-            Комментарий: {orderDetails?.comment ?? 'Нет комментария'}
-        </Text>
-        <Text style={[styles.orderText, { color: activeColors.tint }]}>{servicesTotal} тенге</Text>
+  <View style={[styles.orderDetailsCard, { backgroundColor: activeColors.secondary }]}>
+    <View style={styles.detailRow}>
+      <Ionicons name="car-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailText, { color: activeColors.tint }]}>
+        Гос. номер: {orderDetails?.carNumber ?? 'Не указано'}
+      </Text>
     </View>
+    <View style={styles.detailRow}>
+      <Ionicons name="clipboard-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailText, { color: activeColors.tint }]}>
+        Машина: {orderDetails?.car?.name ?? 'Не указано'} {orderDetails?.modelCar?.name ?? 'Не указано'}
+      </Text>
+    </View>
+    <View style={styles.detailRow}>
+      <Ionicons name="person-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailText, { color: activeColors.tint }]}>
+        Клиент: {formatPhoneNumber(orderDetails?.phoneNumber ?? 'Не указано')}
+      </Text>
+    </View>
+    <View style={styles.detailRow}>
+      <Ionicons name="chatbubble-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailText, { color: activeColors.tint }]}>
+        Комментарий: {orderDetails?.comment ?? 'Нет комментария'}
+      </Text>
+    </View>
+    <View style={styles.detailRow}>
+      <Ionicons name="pricetag-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailTotal, { color: activeColors.accent }]}>
+        Итоговая сумма: {servicesTotal} ₸
+      </Text>
+    </View>
+  </View>
 ) : (
-    <ActivityIndicator size="large" color={activeColors.accent} />
+  <ActivityIndicator size="large" color={activeColors.accent} />
 )}
+
 
 
             <TabView
@@ -484,7 +525,7 @@ const AssignServiceScreen = () => {
                                             }}
                                             style={[styles.priceItem, selectedPrice?.id === item.id ? styles.selectedPriceItem : null, { backgroundColor: activeColors.secondary }]}
                                         >
-                                            <Text style={[styles.priceText, { color: activeColors.tint }]}>{item.price} тенге</Text>
+                                            <Text style={[styles.priceText, { color: activeColors.tint }]}>{item.price} ₸</Text>
                                         </TouchableOpacity>
                                     )}
                                     keyExtractor={(item) => item.id.toString()}
@@ -521,7 +562,6 @@ const AssignServiceScreen = () => {
                     </View>
                 </SafeAreaView>
             </Modal>
-
             {userRole !== 'Мастер' && (
                 <DetailingPaymentSlider
                     selectedOrder={selectedOrder}
@@ -550,9 +590,49 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         flex: 1,
     },
+    orderDetailsSection: {
+        marginTop: 10,
+        padding: 15,
+        borderRadius: 15,
+        marginHorizontal: 20,
+        elevation: 3,
+      },
+      totalSummText: {
+        fontsize: 16,
+        marginLeft: 180
+      },
+      orderDetailText: {
+        fontSize: 16,
+        marginBottom: 5,
+      },
+      detailText: {
+        fontSize: 16,
+        marginLeft: 10,
+      },
+      detailTotal: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 10,
+      },
+      orderDetailTotal: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 10,
+        textAlign: 'center',
+      },
     pdfIcon: {
         marginRight: 10,
     },
+    orderDetailsCard: {
+        margin: 20,
+        padding: 15,
+        borderRadius: 15,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
     orderDetailsHeader: {
         padding: 20,
         borderBottomWidth: 1,
@@ -589,12 +669,17 @@ const styles = StyleSheet.create({
     orderDetails: {
         flex: 1,
     },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+      },
     itemName: {
-        fontSize: 16,
+        fontSize: 19,
         fontWeight: 'bold',
     },
     itemPrice: {
-        fontSize: 14,
+        fontSize: 17,
     },
     addIconContainer: {
         justifyContent: 'center',

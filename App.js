@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from 'expo-notifications';
 // import * as Updates from 'expo-updates'; // Убедитесь, что expo-updates не требуется, если не используете его
-
+import { fetchEnvConfig } from "./screens/config";
 import AuthLoadingScreen from './components/AuthLoadingScreen';
 import LoginScreen from "./screens/LoginScreen";
 import Footer from "./components/Footer";
@@ -21,7 +21,7 @@ import MyWashServicesScreen from './screens/CarWash/MyWashServicesScreen';
 import CompletedWashOrdersScreen from "./screens/CarWash/CompletedWashOrdersScreen";
 import PaymentConfirmationScreen from "./screens/PaymentConfirmationScreen";
 import NotificationScreen from "./screens/NotificationScreen";
-
+import { CarProvider } from "./components/CarContext";  // Добавили CarProvider
 import { ThemeContext } from "./context/ThemeContext";
 import OrdersScreen from "./screens/CarWash/OrdersScreen";
 import OrderDetailsScreen from "./screens/CarWash/OrderDetailsScreen";
@@ -36,6 +36,10 @@ import AssignServiceScreen from "./screens/Detailing/AssignServiceScreen";
 import ListOfDetailingOrdersScreen from "./screens/Detailing/ListOfDetailingOrdersScreen";
 import CompletedDetailingOrdersScreen from "./screens/Detailing/CompletedDetailingOrdersScreen";
 import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import RegisterWithOutOrganizationScreen from "./screens/RegisterWithOutOrganization";
+import BrandListScreen from "./screens/BrandListScreen";
+import NewsScreen from "./screens/NewsScreen";
+
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -109,6 +113,7 @@ const App = () => {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, updateTheme }}>
+      <CarProvider>
       <StatusBar
         animated={true}
         backgroundColor="#61dafb"
@@ -121,6 +126,21 @@ const App = () => {
           <Stack.Screen
             name="AuthLoading"
             component={AuthLoadingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="RegisterWithOutOrganization"
+            component={RegisterWithOutOrganizationScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BrandList"
+            component={BrandListScreen}
+            options={{ headerShown: false }}
+          />
+           <Stack.Screen
+            name="News"
+            component={NewsScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -273,6 +293,8 @@ const App = () => {
           </View>
         </View>
       </Modal>
+      </CarProvider>
+      
     </ThemeContext.Provider>
   );
 };

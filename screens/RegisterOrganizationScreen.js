@@ -16,6 +16,7 @@ import { colors } from "../config/theme";
 import { ThemeContext } from "../context/ThemeContext";
 import CustomButton from "../components/CustomButton";
 import NetInfo from "@react-native-community/netinfo";
+import getEnvVars from './config';
 
 const RegisterOrganizationScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -28,11 +29,12 @@ const RegisterOrganizationScreen = ({ navigation }) => {
   const [organizationTypes, setOrganizationTypes] = useState([]);
   const [selectedType, setSelectedType] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-
+  const { apiUrl } = getEnvVars();
+  
   useEffect(() => {
     const fetchOrganizationTypes = async () => {
       try {
-        const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Organization/TypeOfOrganizationsList');
+        const response = await fetch(`${apiUrl}/api/Organization/TypeOfOrganizationsList`);
         const data = await response.json();
         setOrganizationTypes(data.$values);
       } catch (error) {
@@ -57,7 +59,7 @@ const RegisterOrganizationScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Organization/CreateOrganization', {
+      const response = await fetch(`${apiUrl}/api/Organization/CreateOrganization`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +227,7 @@ const RegisterOrganizationScreen = ({ navigation }) => {
             }}
           >
             <Text style={{ color: activeColors.tint }}>Уже зарегистрированы? </Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={{ color: activeColors.accent, fontWeight: "700" }}>
                 {" "}
                 Войти

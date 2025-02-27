@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Animated, PanResponder, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import getEnvVars from './config';
 
 const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
   const sliderWidth = useRef(new Animated.Value(0)).current;
@@ -16,6 +17,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const [exceedsAmount, setExceedsAmount] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [totalToPay, setTotalToPay] = useState(0);
+  const { apiUrl } = getEnvVars();
 
   useEffect(() => {
     const fetchPaymentMethods = async () => {
@@ -25,7 +27,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/payment/GetAllPaymentMethods', {
+        const response = await fetch(`${apiUrl}/api/payment/GetAllPaymentMethods`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -78,7 +80,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+      const response = await fetch(`${apiUrl}/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -114,7 +116,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`${apiUrl}/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -197,7 +199,7 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
     const amount = paymentAmounts[selectedPaymentMethod] || totalToPay;
 
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`${apiUrl}/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

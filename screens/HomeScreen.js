@@ -19,8 +19,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import getEnvVars from './config';
 const HomeScreens = () => {
+  const { apiUrl } = getEnvVars();
   const { theme, updateTheme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const navigation = useNavigation();
@@ -65,7 +66,7 @@ const HomeScreens = () => {
         return;
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Authenticate/InviteUser', {
+      const response = await fetch(`${apiUrl}/api/Authenticate/InviteUser`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -112,12 +113,12 @@ const HomeScreens = () => {
       } catch (error) {
         Alert.alert("Ошибка", "Не удалось получить тип организации.");
       }
-    } else if (item.title === "Сотрудники") {
+    } else if (item.title === "Клиенты") {
       navigation.navigate("SalarySettings", { userRole });
     } else if (item.title === "Веб-версия") {
       Linking.openURL('https://autosat.kz');
-    } else if (item.title === "Остатки") {
-      navigation.navigate("InventoryBalances");
+    } else if (item.title === "Лента") {
+      navigation.navigate("News");
     } else if (item.title === "Услуги") {
       navigation.navigate("Список");
     }
@@ -125,14 +126,14 @@ const HomeScreens = () => {
   
 
   const allMenuItems = [
-    { title: "Остатки", icon: "checkbox-outline", roles: ["Мастер", "Директор", "Администратор"], soon: true },
+    { title: "Лента", icon: "checkbox-outline", roles: ["Мастер", "Директор", "Администратор"], soon: false },
     { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Администратор", "Директор", "Мастер"] },
     { title: "Мои задачи", icon: "newspaper-outline", roles: ["Директор", "Администратор", "Мастер"], soon: true },
     { title: "Продажи", icon: "cart-outline", roles: ["Администратор", "Директор"], soon: true },
-    { title: "Сотрудники", icon: "people-outline", roles: ["Администратор", "Директор"] },
+    { title: "Клиенты", icon: "people-outline", roles: ["Администратор", "Директор"] },
     { title: "Лояльность", icon: "layers-outline", roles: ["Директор"], soon: true},
     { title: "Услуги", icon: "briefcase-outline", roles: ["Администратор", "Директор", "Мастер"] },
-    { title: "Веб-версия", icon: "logo-chrome", roles: ["Администратор", "Директор", "Мастер"], soon: true },
+    { title: "Веб-версия", icon: "logo-chrome", roles: ["Администратор", "Директор", "Мастер"] },
     { title: "Пригласить", icon: "pulse-outline", roles: ["Мастер", "Директор", "Администратор"] }
   ];
 

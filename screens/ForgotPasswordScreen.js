@@ -22,6 +22,7 @@ import * as Animatable from 'react-native-animatable';
 import { MaterialIcons } from '@expo/vector-icons'; // Иконки
 import { colors } from '../config/theme'; // Тема
 import { ThemeContext } from '../context/ThemeContext'; // Контекст темы
+import getEnvVars from './config';
 
 const ForgotPasswordScreen = () => {
   const { theme } = useContext(ThemeContext);
@@ -31,6 +32,7 @@ const ForgotPasswordScreen = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const navigation = useNavigation();
+  const { apiUrl } = getEnvVars();
 
   const handleSendCode = async () => {
     if (phoneNumber.trim() === '') {
@@ -46,9 +48,9 @@ const ForgotPasswordScreen = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://avtosat-001-site1.ftempurl.com/api/Authenticate/ResetPassword?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}`,
+        `${apiUrl}/api/Verification/SendOTPAutoSat?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}`,
         {
-          method: 'POST',
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -77,62 +79,92 @@ const ForgotPasswordScreen = () => {
 
   const handleVerifyCode = async () => {
     if (confirmationCode.trim() === '') {
-      Alert.alert('Ошибка⛔', 'Введите код подтверждения');
-      return;
+        Alert.alert('Ошибка⛔', 'Введите код подтверждения');
+        return;
     }
 
     if (confirmationCode.length !== 4) {
-      Alert.alert('Ошибка', 'Код подтверждения должен содержать 4 цифры');
-      return;
+        Alert.alert('Ошибка', 'Код подтверждения должен содержать 4 цифры');
+        return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://avtosat-001-site1.ftempurl.com/api/Authenticate/ConfirmResetPasswordCode?code=${confirmationCode}&phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const response = await fetch(
+            `${apiUrl}/api/Verification/VerifyOTPAutoSat?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}&OTP=${confirmationCode}`,
+            {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        console.log('Response:', response);
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
         }
-      );
 
-      if (!response.ok) {
-        throw new Error('Неверный код подтверждения');
-      }
+        // Получаем ответ в виде текста
+        const responseText = await response.text();
+        console.log('Response Text:', responseText);
 
-      const data = await response.json();
-      const token = data.token;
+        let data;
+        try {
+            data = JSON.parse(responseText); // Пытаемся разобрать текст в JSON
+        } catch (error) {
+            console.warn('Ответ не является JSON:', responseText);
+            throw new Error('Некорректный формат ответа от сервера');
+        }
 
-      await AsyncStorage.setItem('access_token_avtosat', token);
+        // Проверяем наличие токена в ответе
+        const token = data?.token;
+        if (!token) {
+            throw new Error('Токен отсутствует в ответе сервера');
+        }
 
-      const roleResponse = await fetch('https://avtosat-001-site1.ftempurl.com/api/authenticate/GetRole', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+        await AsyncStorage.setItem('access_token_avtosat', token);
 
-      if (!roleResponse.ok) {
-        throw new Error('Failed to fetch user role');
-      }
+        // Получаем роль пользователя
+        const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
 
-      const roleData = await roleResponse.json();
-      const userRole = roleData.$values[0];
-      await AsyncStorage.setItem('role_user_avtosat', userRole);
+        if (!roleResponse.ok) {
+            throw new Error(`Ошибка при получении роли: ${roleResponse.status}`);
+        }
 
-      setLoading(false);
+        const roleText = await roleResponse.text();
+        console.log('Role Response Text:', roleText);
 
-      navigation.navigate('Footer');
+        let roleData;
+        try {
+            roleData = JSON.parse(roleText);
+        } catch (error) {
+            throw new Error('Некорректный формат ответа при получении роли');
+        }
+
+        const userRole = roleData?.$values?.[0];
+        if (!userRole) {
+            throw new Error('Роль пользователя не найдена');
+        }
+
+        await AsyncStorage.setItem('role_user_avtosat', userRole);
+
+        setLoading(false);
+        navigation.navigate('Footer');
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Неверный код⚠️', 'Введенный код неверный или истек срок действия');
+        console.error('Ошибка:', error);
+        Alert.alert('Неверный код⚠️', error.message);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
+
 
   return (
     <KeyboardAvoidingView
@@ -142,7 +174,7 @@ const ForgotPasswordScreen = () => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={[styles.container, { backgroundColor: activeColors.primary }]}>
           <View style={styles.logoContainer}>
-            <Image source={require('../images/forgot-password.png')} style={styles.logo} />
+            <Image source={{ uri: 'https://autosat.kz/forgot-password.png' }} style={styles.logo} />
           </View>
           <Animatable.View animation="fadeInUp" duration={800} style={styles.header}>
             <Text style={[styles.headerText, { color: activeColors.tint }]}>

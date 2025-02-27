@@ -7,11 +7,12 @@ import StyledText from "../components/texts/StyledText";
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import getEnvVars from './config';
 
 const NotificationScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
-
+  const { apiUrl } = getEnvVars();
   const [notifications, setNotifications] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
@@ -27,7 +28,7 @@ const NotificationScreen = ({ navigation }) => {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Profile/Notifications', {
+      const response = await fetch(`${apiUrl}/api/Profile/Notifications`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

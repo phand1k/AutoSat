@@ -4,8 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import getEnvVars from './config';
 
 const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
+  const { apiUrl } = getEnvVars();
   const sliderWidth = useRef(new Animated.Value(0)).current;
   const [sliderActivated, setSliderActivated] = useState(false);
   const [confirmationVisible, setConfirmationVisible] = useState(false);
@@ -28,7 +30,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/payment/GetAllPaymentMethods', {
+        const response = await fetch(`${apiUrl}/api/payment/GetAllPaymentMethods`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -81,7 +83,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${orderId}`, {
+      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -117,7 +119,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`${apiUrl}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -126,6 +128,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
       });
 
       if (!response.ok) {
+        console.log(response.message);
         throw new Error(`Failed to complete order. HTTP status ${response.status}`);
       }
 
@@ -227,7 +230,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
     };
   
     try {
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Transaction/CreateDetailingTransaction?detailingOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`${apiUrl}/api/Transaction/CreateDetailingTransaction?detailingOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
