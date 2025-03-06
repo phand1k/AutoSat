@@ -20,10 +20,8 @@ import { ThemeContext } from '../context/ThemeContext';
 import NetInfo from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
 import { useNavigation } from '@react-navigation/native';
-import getEnvVars from './config';
 import LottieView from 'lottie-react-native'; // Для анимации пустого списка
 import { KeyboardAvoidingView, Platform } from 'react-native';
-const { apiUrl } = getEnvVars();
 
 const LoginScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -38,7 +36,6 @@ const LoginScreen = ({ navigation }) => {
   
   useEffect(() => {
     console.log('Login screen rendered');
-    console.log(apiUrl);
   }, []);
   const registerForPushNotificationsAsync = async () => {
     let token;
@@ -60,7 +57,10 @@ const LoginScreen = ({ navigation }) => {
         throw new Error('Authentication token is not available.');
       }
       console.log(jwtToken);
-      const response = await fetch(`${apiUrl}/api/Token/RegisterToken`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/Token/RegisterToken`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -79,8 +79,11 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const fetchAndSaveOrganizationType = async (token) => {
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
     try {
-      const response = await fetch(`${apiUrl}/api/organization/GetTypeOfOrganization`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/organization/GetTypeOfOrganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,8 +131,11 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     const unmaskedPhoneNumber = currentPhoneNumber.replace(/[^\d]/g, '');
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+     const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
     try {
-      const response = await fetch(`${apiUrl}/api/authenticate/login`, {
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/authenticate/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +159,9 @@ const LoginScreen = ({ navigation }) => {
 
       // Получение роли пользователя
       console.log('Fetching user role...');
-      const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
+      
+
+      const roleResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/GetRole`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -185,6 +193,7 @@ const LoginScreen = ({ navigation }) => {
       navigation.navigate('Footer'); // Убедитесь, что 'Footer' правильно зарегистрирован
     } catch (error) {
       console.error('Error:', error);
+
       Alert.alert('Ошибка', 'Произошла ошибка при входе');
     } finally {
       setLoading(false);

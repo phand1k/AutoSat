@@ -16,9 +16,10 @@ import { colors } from "../config/theme";
 import { ThemeContext } from "../context/ThemeContext";
 import CustomButton from "../components/CustomButton";
 import NetInfo from "@react-native-community/netinfo";
-import getEnvVars from './config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RegisterOrganizationScreen = ({ navigation }) => {
+
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const [number, setOrganizationNumber] = useState('');
@@ -29,12 +30,15 @@ const RegisterOrganizationScreen = ({ navigation }) => {
   const [organizationTypes, setOrganizationTypes] = useState([]);
   const [selectedType, setSelectedType] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const { apiUrl } = getEnvVars();
   
   useEffect(() => {
     const fetchOrganizationTypes = async () => {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      console.log(cleanedSatApiURL);
       try {
-        const response = await fetch(`${apiUrl}/api/Organization/TypeOfOrganizationsList`);
+        const response = await fetch(`${cleanedSatApiURL}/api/Organization/TypeOfOrganizationsList`);
+        console.log(response);
         const data = await response.json();
         setOrganizationTypes(data.$values);
       } catch (error) {
@@ -58,8 +62,11 @@ const RegisterOrganizationScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+    
     try {
-      const response = await fetch(`${apiUrl}/api/Organization/CreateOrganization`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Organization/CreateOrganization`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,6 +160,7 @@ const RegisterOrganizationScreen = ({ navigation }) => {
             }}
             placeholder="БИН/ИИН организации"
             placeholderTextColor="#aaaaaa"
+            maxLength={12}
             keyboardType="numeric"
             onChangeText={setOrganizationNumber}
             value={number}

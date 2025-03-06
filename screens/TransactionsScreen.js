@@ -7,7 +7,6 @@ import { colors } from '../config/theme';
 import { format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import DateRangePicker from '../components/DateRangePicker';
-import getEnvVars from './config';
 
 const TransactionsScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -19,7 +18,6 @@ const TransactionsScreen = ({ navigation }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [dateRange, setDateRange] = useState('');
-  const { apiUrl } = getEnvVars();
 
   useEffect(() => {
     fetchTransactions();
@@ -32,8 +30,10 @@ const TransactionsScreen = ({ navigation }) => {
       if (!token) {
         throw new Error('Токен аутентификации недоступен.');
       }
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
 
-      const url = new URL(`${apiUrl}/api/Transaction/GetAllTransactions`);
+      const url = new URL(`${cleanedSatApiURL}/api/Transaction/GetAllTransactions`);
       if (startDate && endDate) {
         url.searchParams.append('dateOfStart', startDate);
         url.searchParams.append('dateOfEnd', endDate);

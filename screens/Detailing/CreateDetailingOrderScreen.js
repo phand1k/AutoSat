@@ -22,15 +22,11 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { colors } from '../../config/theme';
 import { TextInputMask } from 'react-native-masked-text';
 import * as Haptics from 'expo-haptics';
-import getEnvVars from '../config';
-
-const { apiUrl } = getEnvVars();
 
 const CreateDetailingOrderScreen = () => {
   const navigation = useNavigation();
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
-
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [filter, setFilter] = useState('');
@@ -46,15 +42,17 @@ const CreateDetailingOrderScreen = () => {
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [confirmCloseVisible, setConfirmCloseVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [isServiceModalVisible, setIsServiceModalVisible] = useState(false);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [priceList, setPriceList] = useState([]);
   const [customPrice, setCustomPrice] = useState('');
   const [detailingOrderId, setDetailingOrderId] = useState(null);
-
   const stepAnimation = new Animated.Value(0);
+  const [errors, setErrors] = useState({
+    carNumber: false,
+    phoneNumber: false,
+  });
 
   useEffect(() => {
     fetchCarBrands();
@@ -69,13 +67,15 @@ const CreateDetailingOrderScreen = () => {
   };
 
   const fetchCarBrands = async () => {
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim();
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/car/listcar`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/car/listcar`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -105,10 +105,12 @@ const CreateDetailingOrderScreen = () => {
   const fetchModelsByBrandId = async (id) => {
     setIsLoadingModels(true);
     try {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim();
       const token = await AsyncStorage.getItem('access_token_avtosat');
       if (!token) throw new Error('Authentication token is not available.');
 
-      const response = await fetch(`${apiUrl}/api/modelcar/listmodelcars?id=${id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/modelcar/listmodelcars?id=${id}`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -132,8 +134,8 @@ const CreateDetailingOrderScreen = () => {
   };
 
   const createDetailingOrder = async () => {
-    if (!selectedBrand || !selectedModel || !carNumber || !phoneNumber || !comment) {
-      Alert.alert('Ошибка', 'Пожалуйста, заполните все поля.');
+    if (!selectedBrand || !selectedModel || !carNumber || !phoneNumber) {
+      Alert.alert('Ошибка', 'Пожалуйста, заполните все обязательные поля.');
       return;
     }
 
@@ -153,7 +155,10 @@ const CreateDetailingOrderScreen = () => {
         prepayment: Number(prepayment) || 0,
       };
 
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/CreateDetailingOrder`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim();
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/CreateDetailingOrder`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -198,8 +203,10 @@ const CreateDetailingOrderScreen = () => {
     if (step > 1) {
       setStep(step - 1);
       animateStep(step - 1);
-
-      if (step === 5) {
+  
+      if (step === 6) {
+        setPrepayment('');
+      } else if (step === 5) {
         setComment('');
       } else if (step === 4) {
         setPhoneNumber('');
@@ -214,19 +221,17 @@ const CreateDetailingOrderScreen = () => {
   };
 
   const goToNextStep = () => {
-    if (step === 3 && !carNumber) {
-      Alert.alert('Ошибка', 'Пожалуйста, введите гос. номер автомобиля.');
-      return;
-    }
-
-    if (step === 4 && !phoneNumber) {
-      Alert.alert('Ошибка', 'Пожалуйста, введите номер телефона.');
-      return;
-    }
-
-    setStep(step + 1);
-    animateStep(step + 1);
-  };
+  if (step === 3 && !carNumber) {
+    setErrors({ ...errors, carNumber: true });
+    return;
+  }
+  if (step === 4 && !phoneNumber) {
+    setErrors({ ...errors, phoneNumber: true });
+    return;
+  }
+  setStep(step + 1);
+  animateStep(step + 1);
+};
 
   const handleSearch = (text) => {
     setFilter(text);
@@ -332,6 +337,7 @@ const CreateDetailingOrderScreen = () => {
               clearButtonMode="while-editing"
               onSubmitEditing={goToNextStep}
             />
+            {errors.carNumber && <Text style={styles.errorText}>Это поле обязательно для заполнения</Text>}
             <TouchableOpacity style={[styles.button, { backgroundColor: activeColors.accent }]} onPress={goToNextStep}>
               <Text style={styles.buttonText}>Далее</Text>
             </TouchableOpacity>
@@ -355,42 +361,52 @@ const CreateDetailingOrderScreen = () => {
               clearButtonMode="while-editing"
               onSubmitEditing={goToNextStep}
             />
+           {errors.phoneNumber && <Text style={styles.errorText}>Это поле обязательно для заполнения</Text>}
             <TouchableOpacity style={[styles.button, { backgroundColor: activeColors.accent }]} onPress={goToNextStep}>
               <Text style={styles.buttonText}>Далее</Text>
             </TouchableOpacity>
           </>
         );
-      case 5:
-        return (
-          <>
-            <TextInput
-              style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Добавьте комментарий"
-              placeholderTextColor={activeColors.tint}
-              multiline
-              numberOfLines={4}
-              clearButtonMode="while-editing"
-            />
-            <TextInput
-              style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
-              value={prepayment}
-              onChangeText={setPrepayment}
-              placeholder="Предоплата"
-              placeholderTextColor={activeColors.tint}
-              keyboardType="numeric"
-              clearButtonMode="while-editing"
-            />
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: activeColors.accent }]}
-              onPress={createDetailingOrder}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.buttonText}>{isSubmitting ? 'Создание...' : 'Создать заказ'}</Text>
-            </TouchableOpacity>
-          </>
-        );
+        case 5:
+          return (
+            <>
+              <TextInput
+                style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Добавьте комментарий (необязательно)"
+                placeholderTextColor={activeColors.tint}
+                multiline
+                numberOfLines={4}
+                clearButtonMode="while-editing"
+              />
+              <TouchableOpacity style={[styles.button, { backgroundColor: activeColors.accent }]} onPress={goToNextStep}>
+                <Text style={styles.buttonText}>Далее</Text>
+              </TouchableOpacity>
+            </>
+          );
+          case 6:
+  return (
+    <>
+      <TextInput
+        style={[styles.searchBox, { borderColor: activeColors.secondary, color: activeColors.tint }]}
+        value={prepayment}
+        onChangeText={setPrepayment}
+        placeholder="Предоплата"
+        placeholderTextColor={activeColors.tint}
+        keyboardType="numeric"
+        clearButtonMode="while-editing"
+      />
+      {!prepayment && <Text style={styles.infoText}>Если предоплата не указана, будет учтено как "0"</Text>}
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: activeColors.accent }]}
+        onPress={createDetailingOrder}
+        disabled={isSubmitting}
+      >
+        <Text style={styles.buttonText}>{isSubmitting ? 'Создание...' : 'Создать заказ'}</Text>
+      </TouchableOpacity>
+    </>
+  );
       default:
         return null;
     }
@@ -458,26 +474,26 @@ const CreateDetailingOrderScreen = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.stepIndicator}>
-          {[1, 2, 3, 4, 5].map((stepNumber) => (
-            <Animated.View
-              key={stepNumber}
-              style={[
-                styles.step,
-                {
-                  backgroundColor: step >= stepNumber ? activeColors.accent : activeColors.secondary,
-                  transform: [
-                    {
-                      scale: stepAnimation.interpolate({
-                        inputRange: [stepNumber - 1, stepNumber],
-                        outputRange: [1, 1.2],
-                        extrapolate: 'clamp',
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          ))}
+        {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
+  <Animated.View
+    key={stepNumber}
+    style={[
+      styles.step,
+      {
+        backgroundColor: step >= stepNumber ? activeColors.accent : activeColors.secondary,
+        transform: [
+          {
+            scale: stepAnimation.interpolate({
+              inputRange: [stepNumber - 1, stepNumber],
+              outputRange: [1, 1.2],
+              extrapolate: 'clamp',
+            }),
+          },
+        ],
+      },
+    ]}
+  />
+))}
         </View>
         <View style={[styles.selectionInfo, { backgroundColor: activeColors.secondary }]}>
           {selectedBrand && (
@@ -495,6 +511,7 @@ const CreateDetailingOrderScreen = () => {
               Гос. номер: {carNumber}
             </Text>
           )}
+          
           {phoneNumber && (
             <Text style={[styles.selectionText, { color: activeColors.tint }]}>
               Телефон: {phoneNumber}
@@ -637,6 +654,16 @@ const styles = StyleSheet.create({
   selectionText: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    marginLeft: 10,
+    marginBottom: 10,
+  },
+  infoText: {
+    color: 'gray',
+    marginLeft: 10,
+    marginBottom: 10,
   },
 });
 

@@ -24,7 +24,10 @@ const DashboardReport = ({ visible, onClose, theme }) => {
     try {
       setIsLoading(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoForWashorderList', {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/GetInfoForWashorderList`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

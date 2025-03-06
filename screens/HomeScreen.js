@@ -19,9 +19,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Animatable from 'react-native-animatable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import getEnvVars from './config';
+
 const HomeScreens = () => {
-  const { apiUrl } = getEnvVars();
+
   const { theme, updateTheme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const navigation = useNavigation();
@@ -65,8 +65,10 @@ const HomeScreens = () => {
         Alert.alert("Ошибка", "Токен аутентификации отсутствует.");
         return;
       }
-
-      const response = await fetch(`${apiUrl}/api/Authenticate/InviteUser`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/Authenticate/InviteUser`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -117,8 +119,8 @@ const HomeScreens = () => {
       navigation.navigate("SalarySettings", { userRole });
     } else if (item.title === "Веб-версия") {
       Linking.openURL('https://autosat.kz');
-    } else if (item.title === "Лента") {
-      navigation.navigate("News");
+    } else if (item.title === "Статистика") {
+      navigation.navigate("Statistics");
     } else if (item.title === "Услуги") {
       navigation.navigate("Список");
     }
@@ -126,7 +128,7 @@ const HomeScreens = () => {
   
 
   const allMenuItems = [
-    { title: "Лента", icon: "checkbox-outline", roles: ["Мастер", "Директор", "Администратор"], soon: false },
+    { title: "Статистика", icon: "stats-chart-outline", roles: ["Мастер", "Директор", "Администратор"], soon: false },
     { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Администратор", "Директор", "Мастер"] },
     { title: "Мои задачи", icon: "newspaper-outline", roles: ["Директор", "Администратор", "Мастер"], soon: true },
     { title: "Продажи", icon: "cart-outline", roles: ["Администратор", "Директор"], soon: true },

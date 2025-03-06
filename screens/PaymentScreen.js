@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { ThemeContext } from "../context/ThemeContext";
 import { colors } from "../config/theme";
 import StyledText from "../components/texts/StyledText";
-import getEnvVars from './config';
 
 const PaymentScreen = ({ route, navigation }) => {
   const { theme } = useContext(ThemeContext);
@@ -12,7 +11,6 @@ const PaymentScreen = ({ route, navigation }) => {
   const { totalAmount, orderId } = route.params;
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [confirmationModalVisible, setConfirmationModalVisible] = useState(false);
-  const { apiUrl } = getEnvVars();
   const paymentMethods = ['Cash', 'Credit Card', 'Mobile Payment'];
 
   const handlePaymentMethodSelection = (method) => {
@@ -26,7 +24,10 @@ const PaymentScreen = ({ route, navigation }) => {
   const confirmOrderCompletion = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/director/CompleteWashOrder/?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/director/CompleteWashOrder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

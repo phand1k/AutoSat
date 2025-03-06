@@ -17,18 +17,18 @@ import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Button, Dialog, Portal, Provider, Card } from 'react-native-paper';
-import getEnvVars from './config';
 import LottieView from 'lottie-react-native';
 import { KeyboardAvoidingView, Platform } from 'react-native';
+
+
 const validatePhoneNumber = (phoneNumber) => {
   const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, '');
   const regex = /^(7(700|701|702|705|707|708|747|771|775|776|777|778))\d{7}$/;
   return regex.test(unmaskedPhoneNumber);
 };
 
-const { apiUrl } = getEnvVars();
-
 const RegisterWithOutOrganizationScreen = ({ navigation }) => {
+
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -43,7 +43,17 @@ const RegisterWithOutOrganizationScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchOrganizationTypes = async () => {
       try {
-        const response = await fetch(`${apiUrl}/api/Organization/TypeOfOrganizationsList`);
+        const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+        const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+    
+        console.log("URL: " + cleanedSatApiURL);
+    
+        const response = await fetch(`${cleanedSatApiURL}/api/Organization/TypeOfOrganizationsList`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+    
         const data = await response.json();
         setOrganizationTypes(data.$values);
       } catch (error) {
@@ -56,7 +66,9 @@ const RegisterWithOutOrganizationScreen = ({ navigation }) => {
 
   const fetchAndSaveOrganizationType = async (token) => {
     try {
-      const response = await fetch(`${apiUrl}/api/organization/GetTypeOfOrganization`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      const response = await fetch(`${cleanedSatApiURL}/api/organization/GetTypeOfOrganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -94,7 +106,9 @@ const RegisterWithOutOrganizationScreen = ({ navigation }) => {
       if (!jwtToken) {
         throw new Error('Authentication token is not available.');
       }
-      const response = await fetch(`${apiUrl}/Token/RegisterToken`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      const response = await fetch(`${cleanedSatApiURL}/Token/RegisterToken`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -117,84 +131,97 @@ const RegisterWithOutOrganizationScreen = ({ navigation }) => {
       Alert.alert("Ошибка", "Нет интернет-соединения");
       return;
     }
-
+  
     if (!phoneNumber || phoneNumber.includes('_') || !password || !confirmPassword || !selectedType) {
       Alert.alert("Ошибка", "Заполните все поля корректно");
       return;
     }
-
+  
     if (!validatePhoneNumber(phoneNumber)) {
       Alert.alert("Ошибка", "Введите корректный номер телефона.");
       return;
     }
-
+  
     if (password !== confirmPassword) {
       Alert.alert("Ошибка", "Пароли не совпадают");
       return;
     }
-
+  
     setLoading(true);
     const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, '');
+  
     try {
-      const response = await fetch(`${apiUrl}/api/Authenticate/RegisterWithoutOrganizationNumber?typeOfOrganizationId=${selectedType}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          password,
-          phoneNumber: unmaskedPhoneNumber
-        }),
-      });
-
-      if (!response.ok) {
-        Alert.alert("Ошибка", "Ошибка при регистрации");
-        setLoading(false);
-        return;
-      }
-      const loginResponse = await fetch(`${apiUrl}/api/authenticate/login`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+  
+      // Регистрация пользователя
+      const registerResponse = await fetch(`${cleanedSatApiURL}/api/Authenticate/RegisterWithoutOrganizationNumber?typeOfOrganizationId=${selectedType}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           phoneNumber: unmaskedPhoneNumber,
-          password,
+          password: password,
         }),
       });
-
+  
+      if (!registerResponse.ok) {
+        Alert.alert("Ошибка", "Ошибка при регистрации");
+        setLoading(false);
+        return;
+      }
+  
+      // Автоматический вход после успешной регистрации
+      const loginResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: unmaskedPhoneNumber,
+          password: password,
+        }),
+      });
+  
       if (!loginResponse.ok) {
         Alert.alert("Ошибка", "Ошибка при автоматическом входе после регистрации");
         setLoading(false);
         return;
       }
-
-      const data = await loginResponse.json();
-      const token = data.token;
+  
+      const loginData = await loginResponse.json();
+      const token = loginData.token;
       await AsyncStorage.setItem('access_token_avtosat', token);
-
-      const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
+  
+      // Получение роли пользователя
+      const roleResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/GetRole`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (!roleResponse.ok) {
         throw new Error('Failed to fetch user role');
       }
-
+  
       const roleData = await roleResponse.json();
       const userRole = roleData.$values[0];
       await AsyncStorage.setItem('role_user_avtosat', userRole);
+  
+      // Получение и сохранение типа организации
       await fetchAndSaveOrganizationType(token);
+  
+      // Регистрация для push-уведомлений
       await registerForPushNotificationsAsync();
-      Alert.alert("Успех", "Регистрация прошла успешно");
-
+  
+      // Навигация на главный экран
       navigation.navigate('Footer');
+  
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Ошибка:', error);
       Alert.alert("Ошибка", "Произошла ошибка при регистрации");
     } finally {
       setLoading(false);

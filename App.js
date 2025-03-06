@@ -5,8 +5,6 @@ import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from 'expo-notifications';
-// import * as Updates from 'expo-updates'; // Убедитесь, что expo-updates не требуется, если не используете его
-import { fetchEnvConfig } from "./screens/config";
 import AuthLoadingScreen from './components/AuthLoadingScreen';
 import LoginScreen from "./screens/LoginScreen";
 import Footer from "./components/Footer";
@@ -39,10 +37,11 @@ import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import RegisterWithOutOrganizationScreen from "./screens/RegisterWithOutOrganization";
 import BrandListScreen from "./screens/BrandListScreen";
 import NewsScreen from "./screens/NewsScreen";
+import StatisticsScreen from "./screens/StatisticsScreen";
 
 const Stack = createStackNavigator();
-
 const App = () => {
+  
   const [hidden, setHidden] = useState(false);
   const STYLES = ['default', 'dark-content', 'light-content'];
   const TRANSITIONS = ['fade', 'slide', 'none'];
@@ -53,6 +52,28 @@ const App = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   // Функция для получения версии с указанного URL
+  const fetchAndSaveApiUrl = async () => {
+    try {
+      // Выполняем запрос к серверу для получения URL
+      const response = await fetch('https://autosat.kz/devURL.json');
+      if (!response.ok) {
+        throw new Error('Failed to fetch API URL');
+      }
+  
+      // Получаем URL как текст (если сервер возвращает не JSON, а просто текст)
+      const apiUrl = await response.text();
+  
+      // Сохраняем URL в AsyncStorage
+      await AsyncStorage.setItem('SatApiURL', apiUrl);
+      console.log('API URL saved:', apiUrl);
+    } catch (error) {
+      console.error('Error fetching and saving API URL:', error);
+    }
+  };
+  useEffect(() => {
+    // При запуске приложения вызываем функцию для получения и сохранения URL
+    fetchAndSaveApiUrl();
+  }, []); // Пустой массив зависимостей гарантирует, что эффект выполнится только при монтировании
 
   // Функция для проверки версии и отображения модального окна при необходимости
   const updateTheme = async (newTheme) => {
@@ -64,6 +85,7 @@ const App = () => {
     setTheme(newTheme);
     await AsyncStorage.setItem("homeTheme", JSON.stringify(newTheme));
   };
+
   useEffect(() => {
     const loadTheme = async () => {
       const savedTheme = await AsyncStorage.getItem("homeTheme");
@@ -166,6 +188,11 @@ const App = () => {
           <Stack.Screen
             name="Dashboard"
             component={DashboardScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Statistics"
+            component={StatisticsScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

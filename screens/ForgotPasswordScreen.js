@@ -22,7 +22,6 @@ import * as Animatable from 'react-native-animatable';
 import { MaterialIcons } from '@expo/vector-icons'; // Иконки
 import { colors } from '../config/theme'; // Тема
 import { ThemeContext } from '../context/ThemeContext'; // Контекст темы
-import getEnvVars from './config';
 
 const ForgotPasswordScreen = () => {
   const { theme } = useContext(ThemeContext);
@@ -32,7 +31,6 @@ const ForgotPasswordScreen = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const navigation = useNavigation();
-  const { apiUrl } = getEnvVars();
 
   const handleSendCode = async () => {
     if (phoneNumber.trim() === '') {
@@ -44,11 +42,12 @@ const ForgotPasswordScreen = () => {
       Alert.alert('Ошибка', 'Введите корректный номер телефона');
       return;
     }
-
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
     setLoading(true);
     try {
       const response = await fetch(
-        `${apiUrl}/api/Verification/SendOTPAutoSat?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}`,
+        `${cleanedSatApiURL}/api/Authenticate/SendOTP?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}`,
         {
           method: 'GET',
           headers: {
@@ -64,9 +63,11 @@ const ForgotPasswordScreen = () => {
       } else if (response.status >= 200 && response.status < 300) {
         setStep(2); 
         Alert.alert('Отправлено✅', 'Код подтверждения был отправлен на ваш номер');
-      } else {
+      } else if (response.status === 200) {
+        setStep(2); 
+        Alert.alert('Отправлено✅', 'Код подтверждения был отправлен на ваш номер');
+      }else {
         Alert.alert('Ошибка⛔', `Ошибка при отправке кода подтверждения. Статус: ${response.status}`);
-        setStep(2);
       }
     } catch (error) {
       console.error('Error during sending code:', error.message);
@@ -89,9 +90,13 @@ const ForgotPasswordScreen = () => {
     }
 
     setLoading(true);
+
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    console.log(SatApiURL);
+     const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
     try {
         const response = await fetch(
-            `${apiUrl}/api/Verification/VerifyOTPAutoSat?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}&OTP=${confirmationCode}`,
+            `${cleanedSatApiURL}/api/Authenticate/VerifyOTP?phoneNumber=${phoneNumber.replace(/[^\d]/g, '')}&code=${confirmationCode}`,
             {
                 method: 'GET',
                 headers: {
@@ -99,7 +104,7 @@ const ForgotPasswordScreen = () => {
                 },
             }
         );
-
+        console.log(SatApiURL);
         console.log('Response:', response);
         if (!response.ok) {
             throw new Error(`Ошибка сервера: ${response.status}`);
@@ -124,9 +129,9 @@ const ForgotPasswordScreen = () => {
         }
 
         await AsyncStorage.setItem('access_token_avtosat', token);
-
+        
         // Получаем роль пользователя
-        const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
+        const roleResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/GetRole`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -158,7 +163,7 @@ const ForgotPasswordScreen = () => {
         setLoading(false);
         navigation.navigate('Footer');
     } catch (error) {
-        console.error('Ошибка:', error);
+        console.error('Ошибка:', error.message);
         Alert.alert('Неверный код⚠️', error.message);
     } finally {
         setLoading(false);

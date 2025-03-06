@@ -10,11 +10,8 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Animated } from 'react-native';
-import getEnvVars from '../config';
 
-const { apiUrl } = getEnvVars();
 const scaleValue = new Animated.Value(1);
-
 const ListOfDetailingOrdersScreen = () => {
 
   const animatePress = () => {
@@ -152,7 +149,9 @@ const ListOfDetailingOrdersScreen = () => {
 const fetchSummOfCarsInWork = async () => {
   try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfCarsInWork`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfCarsInWork`, {
           headers: {
               'Authorization': `Bearer ${token}`,
           },
@@ -171,7 +170,10 @@ const fetchSummOfCarsInWork = async () => {
 const fetchCountOfNotReadyCars = async () =>{
   try {
     const token = await AsyncStorage.getItem('access_token_avtosat');
-    const response = await fetch(`${apiUrl}/api/DetailingOrder/GetCountOfNotReadyCars`, {
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+    const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetCountOfNotReadyCars`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -190,7 +192,10 @@ const fetchCountOfNotReadyCars = async () =>{
 const fetchCountOfReadyCars = async () =>{
   try {
     const token = await AsyncStorage.getItem('access_token_avtosat');
-    const response = await fetch(`${apiUrl}/api/DetailingOrder/GetCountOfCarsReady`, {
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+    const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetCountOfCarsReady`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -209,7 +214,10 @@ const fetchCountOfReadyCars = async () =>{
 const fetchCountOfServicesInWork = async () => {
   try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetCountOfServicesInWork`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetCountOfServicesInWork`, {
           headers: {
               'Authorization': `Bearer ${token}`,
           },
@@ -228,7 +236,10 @@ const fetchCountOfServicesInWork = async () => {
 const fetchCountOfCarsInWork = async () => {
   try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/CountOfCarsInWork`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/CountOfCarsInWork`, {
           headers: {
               'Authorization': `Bearer ${token}`,
           },
@@ -247,7 +258,10 @@ const fetchCountOfCarsInWork = async () => {
     const readyOrder = async (orderId) => {
       try {
         const token = await AsyncStorage.getItem('access_token_avtosat');
-        const response = await fetch(`${apiUrl}/api/DetailingOrder/ReadyDetailingOrder?detailingOrderId=${orderId}`, {
+        const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+        const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+        const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/ReadyDetailingOrder?detailingOrderId=${orderId}`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -274,7 +288,10 @@ const fetchCountOfCarsInWork = async () => {
     const deleteOrder = async (orderId) => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingOrder/DeleteDetailingOrder?id=${orderId}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/DeleteDetailingOrder?id=${orderId}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -297,7 +314,10 @@ const fetchCountOfCarsInWork = async () => {
         try {
             setRefreshing(true);
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingOrder/AllNotCompletedOrders`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/AllNotCompletedOrders`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -337,8 +357,10 @@ const fetchCountOfCarsInWork = async () => {
               const resolvedOrder = resolveReferences(order);
               const car = resolvedOrder.car || {};
               const modelCar = resolvedOrder.modelCar || {};
-            
-              const sumResponse = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
+              const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+              const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+              const sumResponse = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
                 headers: {
                   'Authorization': `Bearer ${token}`,
                 },

@@ -11,7 +11,6 @@ import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
 import DateRangePicker from "../../components/DateRangePicker";
 import { format } from 'date-fns';
 import LottieView from 'lottie-react-native'; // Для анимации пустого списка
-import getEnvVars from '../config';
 
 
 const initialLayout = { width: Dimensions.get('window').width };
@@ -19,7 +18,6 @@ const initialLayout = { width: Dimensions.get('window').width };
 const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
-  const { apiUrl } = getEnvVars();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('');
   const [orders, setOrders] = useState([]);
@@ -46,6 +44,33 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
     { key: 'orderDetails', title: 'Подробности заказа' },
     { key: 'assignedServices', title: 'Назначенные услуги' },
   ]);
+  const handleShareOrderDetails = async () => {
+    try {
+      if (!orderDetails) return;
+  
+      // Формируем сообщение с данными о заказе
+      const message = `
+        Детали заказа:
+        - Марка: ${orderDetails.car.name}
+        - Модель: ${orderDetails.modelCar.name}
+        - Гос номер: ${orderDetails.carNumber}
+        - Создано: ${formatDistanceToNow(parseISO(orderDetails.dateOfCreated), { locale: ru })} назад
+        - Создал: ${orderDetails.createdByFullName}
+        - Завершил: ${orderDetails.endedByFullName}
+        - Способ оплаты: ${paymentInfo?.paymentMethod?.name || 'Неизвестно'}
+        - Сумма оплаты: ${paymentInfo?.summ || '0'} тг
+        - К оплате: ${paymentInfo?.toPay || '0'} тг
+      `;
+  
+      // Отправляем сообщение через API Share
+      await Share.share({
+        message: message,
+      });
+    } catch (error) {
+      console.error('Ошибка при отправке данных:', error);
+      Alert.alert('Ошибка', 'Не удалось отправить данные');
+    }
+  };
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -69,6 +94,8 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
     setRefreshing(true);
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
       if (!token) {
         throw new Error('Токен аутентификации недоступен.');
       }
@@ -77,7 +104,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
       const formattedStartDate = startDate ? format(parseISO(startDate), "yyyy-MM-dd'T'00:00:00") : null;
       const formattedEndDate = endDate ? format(addMinutes(addHours(parseISO(endDate), 23), 59), "yyyy-MM-dd'T'HH:mm:ss") : null;
   
-      const url = new URL(`${apiUrl}/api/Transaction/GetAllDetailingOrderTransactions`);
+      const url = new URL(`${cleanedSatApiURL}/api/Transaction/GetAllDetailingOrderTransactions`);
       if (formattedStartDate && formattedEndDate) {
         url.searchParams.append('dateOfStart', formattedStartDate);
         url.searchParams.append('dateOfEnd', formattedEndDate);
@@ -158,13 +185,14 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
       // Форматирование дат
       const formattedStartDate = startDate ? format(parseISO(startDate), "yyyy-MM-dd'T'00:00:00") : null;
       const formattedEndDate = endDate ? format(addMinutes(addHours(parseISO(endDate), 23), 59), "yyyy-MM-dd'T'HH:mm:ss") : null;
   
       // Формирование URL с параметрами дат
-      const url = new URL(`${apiUrl}/api/DetailingOrder/AllCompletedDetailingOrders`);
+      const url = new URL(`${cleanedSatApiURL}/api/DetailingOrder/AllCompletedDetailingOrders`);
       if (formattedStartDate && formattedEndDate) {
         url.searchParams.append('dateOfStart', formattedStartDate);
         url.searchParams.append('dateOfEnd', formattedEndDate);
@@ -212,7 +240,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
         const car = resolvedOrder.car || {};
         const modelCar = resolvedOrder.modelCar || {};
   
-        const sumResponse = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
+        const sumResponse = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${resolvedOrder.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -223,7 +251,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
         const sum = await sumResponse.json();
   
         // Получаем информацию о платеже
-        const paymentResponse = await fetch(`${apiUrl}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${resolvedOrder.id}`, {
+        const paymentResponse = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${resolvedOrder.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -259,7 +287,10 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const fetchOrderDetails = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/DetailsDetailingOrder?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/DetailsDetailingOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -285,7 +316,10 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const fetchPaymentInfo = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetInfoPaymentForDetailingOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -308,7 +342,10 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const fetchAssignedServices = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -324,7 +361,10 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
   const fetchServiceDetails = async (washServiceId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/WashService/DetailsWashService?id=${washServiceId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashService/DetailsWashService?id=${washServiceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -448,8 +488,17 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
     );
   };
 
+  
   const renderOrderDetails = () => (
     <View style={{ flex: 1, padding: 10 }}>
+      {/* Кнопка "Поделиться" в правом верхнем углу */}
+      <TouchableOpacity
+        style={styles.shareButtonModal}
+        onPress={handleShareOrderDetails}
+      >
+        <Ionicons name="share-outline" size={24} color={activeColors.tint} />
+      </TouchableOpacity>
+  
       {orderDetails ? (
         <ScrollView>
           {/* Основная информация */}
@@ -527,6 +576,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
       )}
     </View>
   );
+
   const handlePeriodSelect = (period) => {
     const today = new Date();
     let startDate, endDate;
@@ -787,6 +837,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     elevation: 5,
+  },
+  shareButtonModal: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
   },
   periodButtonsContainer: {
     flexDirection: 'row',

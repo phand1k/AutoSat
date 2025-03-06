@@ -7,9 +7,7 @@ import { ThemeContext } from "../context/ThemeContext";
 import { colors } from "../config/theme";
 import StyledText from "../components/texts/StyledText";
 import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
-import getEnvVars from './config';
 
-const { apiUrl } = getEnvVars();
 const initialLayout = { width: Dimensions.get('window').width };
 const scaleValue = new Animated.Value(1);
 const CartScreen = () => {
@@ -127,12 +125,14 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       console.log(token);
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/service/GetAllServices`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/service/GetAllServices`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -158,12 +158,14 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       console.log(token);
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/userrole/GetUsersWithRoles`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/userrole/GetUsersWithRoles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -188,26 +190,33 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
   const fetchRoles = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       console.log(token);
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/userrole/GetRoles`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/userrole/GetRoles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log('URL'+SatApiURL);
+      console.log('response for me'+response.url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch roles. HTTP status ${response.status}`);
+        throw new Error(`Failed to fetch roles. HTTP status ${response.message}`);
       }
 
       const responseData = await response.json();
       setRoles(responseData.$values);
-    } catch (error) {
+    } 
+    catch (error) {
       console.error('Error fetching roles:', error);
+      console.log('URL'+SatApiURL);
+      console.log('response for me'+response.url);
       Alert.alert("Error", `Failed to fetch roles: ${error.message}`);
     }
   };
@@ -215,11 +224,13 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
   const handleDeleteUser = async (id) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/director/deleteuser/?id=${id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/director/deleteuser/?id=${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -241,11 +252,13 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
   const handleDeleteService = async (id) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`${apiUrl}/api/service/deleteservice/?id=${id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/service/deleteservice/?id=${id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -268,11 +281,13 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
     if (selectedUser && selectedRole) {
       try {
         const token = await AsyncStorage.getItem('access_token_avtosat');
+        const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+        const cleanedSatApiURL = SatApiURL.trim();
         if (!token) {
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch(`${apiUrl}/api/UserRole/EditUserRole?userId=${selectedUser.userId}&roleId=${selectedRole}`, {
+        const response = await fetch(`${cleanedSatApiURL}/api/UserRole/EditUserRole?userId=${selectedUser.userId}&roleId=${selectedRole}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -322,11 +337,13 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
   const handleChangePrice = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       if (!token) {
         throw new Error('Токен аутентификации недоступен.');
       }
   
-      const response = await fetch(`${apiUrl}/api/Service/ChangePrice?serviceId=${selectedService.id}&newPrice=${newPrice}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Service/ChangePrice?serviceId=${selectedService.id}&newPrice=${newPrice}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -361,11 +378,13 @@ const [newPrice, setNewPrice] = useState(''); // Новая цена
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL')
+      const cleanedSatApiURL = SatApiURL.trim();
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
   
-      const response = await fetch(`${apiUrl}/api/service/CreateService`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/service/CreateService`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

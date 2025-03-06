@@ -34,11 +34,14 @@ const CreateOrderScreen = () => {
   const fetchCarBrands = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/car/listcar', {
+      const response = await fetch(`${cleanedSatApiURL}/api/car/listcar`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -70,11 +73,14 @@ const CreateOrderScreen = () => {
     try {
       setIsLoadingModels(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/modelcar/listmodelcars?id=${id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/modelcar/listmodelcars?id=${id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -110,6 +116,9 @@ const CreateOrderScreen = () => {
     try {
       setIsSubmitting(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
@@ -121,7 +130,7 @@ const CreateOrderScreen = () => {
         phoneNumber: phoneNumber.replace(/[^\d]/g, '')
       };
   
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/createwashorder', {
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/createwashorder`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

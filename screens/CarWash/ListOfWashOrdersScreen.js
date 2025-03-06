@@ -73,7 +73,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchReportData = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetInfoForWashorderList', {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/GetInfoForWashorderList`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -111,7 +114,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
 
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/ReadyWashOrder/?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/ReadyWashOrder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -300,7 +306,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -325,12 +334,15 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       }
 
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       if (!token) {
         throw new Error('Токен не найден');
       }
       console.log(`Fetching service details for washServiceId: ${washServiceId} with token: ${token}`);
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DetailsWashService?id=${washServiceId}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/WashService/DetailsWashService?id=${washServiceId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -369,7 +381,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchUsers = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Director/GetAllUsers', {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/Director/GetAllUsers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -389,7 +404,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
 
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/deletewashorder/?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/deletewashorder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -421,7 +439,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
     try {
       setRefreshing(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashOrder/AllNotCompletedWashOrdersAsync', {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/AllNotCompletedWashOrdersAsync`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -464,7 +485,7 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
         const car = resolvedOrder.car || {};
         const modelCar = resolvedOrder.modelCar || {};
 
-        const sumResponse = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Washorder/GetSummOfWashServicesOnOrder?id=${resolvedOrder.id}`, {
+        const sumResponse = await fetch(`${cleanedSatApiURL}/api/Washorder/GetSummOfWashServicesOnOrder?id=${resolvedOrder.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -511,7 +532,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchServices = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Service/GetAllServices', {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/Service/GetAllServices`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -533,7 +557,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchAssignedServices = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/AllWashServicesOnOrderAsync?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashService/AllWashServicesOnOrderAsync?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -615,9 +642,12 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const fetchSalary = async (service, user) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       console.log(`Fetching salary for serviceId: ${service.id}, userId: ${user.id}`);
 
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/Salary/GetSalaryUser?serviceId=${service.id}&aspNetUserId=${user.id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Salary/GetSalaryUser?serviceId=${service.id}&aspNetUserId=${user.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -660,11 +690,13 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const createSalarySetting = async (serviceId, userId, salary) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       console.log(salary);
       const validSalary = salary && !isNaN(salary) ? salary : 0;
   
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/Salary/createsalarysetting', {
+      const response = await fetch(`${cleanedSatApiURL}/api/Salary/createsalarysetting`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -692,7 +724,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const completeWashOrder = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/CompleteWashOrder/?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/CompleteWashOrder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -716,7 +751,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const deleteWashOrder = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashOrder/deletewashorder/?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/deletewashorder/?id=${orderId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -738,7 +776,10 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
   const deleteWashServiceFromOrder = async (washServiceId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`https://avtosat-001-site1.ftempurl.com/api/WashService/DeleteWashServiceFromOrder?id=${washServiceId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/WashService/DeleteWashServiceFromOrder?id=${washServiceId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -855,14 +896,16 @@ const ListOfWashOrdersScreen = ({ navigation }) => {
       }
   
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
       // Преобразование строки в число с проверкой
       console.log(editedPrice);
       const priceWithoutCurrency = editedPrice && !isNaN(editedPrice) ? editedPrice : 0;
       console.log(salary);
       const validSalary = salary && !isNaN(salary) ? salary : 0;
   
-      const response = await fetch('https://avtosat-001-site1.ftempurl.com/api/WashService/CreateWashService', {
+      const response = await fetch(`${cleanedSatApiURL}/api/WashService/CreateWashService`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

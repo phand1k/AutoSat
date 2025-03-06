@@ -4,10 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import getEnvVars from './config';
 
 const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
-  const { apiUrl } = getEnvVars();
   const sliderWidth = useRef(new Animated.Value(0)).current;
   const [sliderActivated, setSliderActivated] = useState(false);
   const [confirmationVisible, setConfirmationVisible] = useState(false);
@@ -26,11 +24,13 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
     const fetchPaymentMethods = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token_avtosat');
+        const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+        const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
         if (!token) {
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch(`${apiUrl}/api/payment/GetAllPaymentMethods`, {
+        const response = await fetch(`${cleanedSatApiURL}/api/payment/GetAllPaymentMethods`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -80,14 +80,46 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
     })
   ).current;
 
-  const fetchOrderTotal = async (orderId) => {
+
+
+  const fetchOrderTotalWithPrepayment = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfDetailingWithPrepaymentServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const sum = await response.json();
+      return sum;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  };
+
+
+  const fetchOrderTotal = async (orderId) => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -101,7 +133,7 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
 
   const handleCompleteOrder = async () => {
     try {
-      const sum = await fetchOrderTotal(selectedOrder.id);
+      const sum = await fetchOrderTotalWithPrepayment(selectedOrder.id);
       if (sum <= 0) {
         Alert.alert('Ошибка', 'Нельзя завершить заказ-наряд, если не назначены услуги');
         resetSlider();
@@ -118,8 +150,10 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
 
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+     const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
     try {
-      const response = await fetch(`${apiUrl}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -219,18 +253,23 @@ const DetailingPaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selecte
   
     // Логика для обработки суммы наличных
     console.log(paymentAmounts['Наличный'])
+    const toPayAmount = totalToPay || 0;
     const cashAmount = paymentAmounts['Наличный'] || 0;  // Парсим сумму наличными
-    const totalSum = totalToPay;  // Общая сумма услуг
+    const totalSummWithOutPrepayment = await fetchOrderTotal(selectedOrder.id);
   
     // Формируем тело запроса
     let body = {
       paymentMethodId,
-      summ: totalSum,  // Всегда передаем общую сумму услуг
-      toPay: cashAmount,  // Сумма, введенная наличными
+      summ: totalSummWithOutPrepayment,  // Всегда передаем общую сумму услуг
+      toPay: toPayAmount,  // Сумма, введенная наличными
     };
-  
+
+    
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+    const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
     try {
-      const response = await fetch(`${apiUrl}/api/Transaction/CreateDetailingTransaction?detailingOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Transaction/CreateDetailingTransaction?detailingOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

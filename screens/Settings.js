@@ -6,7 +6,6 @@ import StyledText from "../components/texts/StyledText";
 import SettingsItem from "../components/settings/SettingsItem";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import getEnvVars from './config';
 
 const SettingsScreen = ({ navigation }) => {
   const { theme, updateTheme } = useContext(ThemeContext);
@@ -20,8 +19,9 @@ const SettingsScreen = ({ navigation }) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [userRole, setUserRole] = useState(null); // Состояние для роли пользователя
   const [isFullNameModalVisible, setIsFullNameModalVisible] = useState(false);
-  const { apiUrl } = getEnvVars();
-
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  
   useEffect(() => {
     const fetchUserRole = async () => {
         const role = await AsyncStorage.getItem('role_user_avtosat');
@@ -50,6 +50,34 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+
+  const setUserFullName = async (firstName, lastName) => {
+    try {
+      const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim();
+  
+      const response = await fetch(`${cleanedSatApiURL}/api/Authenticate/SetUserFullName?firstName=${firstName}&lastName=${lastName}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (response.ok) {
+        Alert.alert("Успех", "ФИО успешно обновлено.");
+        setIsFullNameModalVisible(false); // Закрываем модальное окно после успешного обновления
+        fetchData(); // Обновляем данные пользователя
+      } else {
+        throw new Error('Failed to update full name');
+      }
+    } catch (error) {
+      console.error('Error updating full name:', error);
+      Alert.alert("Ошибка", "Не удалось обновить ФИО.");
+    }
+  };
+
   const fetchData = async () => {
     try {
       setRefreshing(true);
@@ -57,22 +85,24 @@ const SettingsScreen = ({ navigation }) => {
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
 
-      const userResponse = await fetch(`${apiUrl}/api/profile/getprofileinfo`, {
+      const userResponse = await fetch(`${cleanedSatApiURL}/api/profile/getprofileinfo`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      const userFullNameResponse = await fetch(`${apiUrl}/api/Authenticate/CheckUserFullName`, {
+      const userFullNameResponse = await fetch(`${cleanedSatApiURL}/api/Authenticate/CheckUserFullName`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      const organizationResponse = await fetch(`${apiUrl}/api/organization/getsubscriptionorganization`, {
+      const organizationResponse = await fetch(`${cleanedSatApiURL}/api/organization/getsubscriptionorganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -102,8 +132,10 @@ const SettingsScreen = ({ navigation }) => {
   const confirmOrganizationPassword = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
       console.log(password);
-      const response = await fetch(`${apiUrl}/api/Organization/ConfirmRights/?password=${password}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Organization/ConfirmRights/?password=${password}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -129,7 +161,10 @@ const SettingsScreen = ({ navigation }) => {
   const handleDeleteAccount = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/Authenticate/DeleteUser/?id=${userInfo.id}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/Authenticate/DeleteUser/?id=${userInfo.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -184,7 +219,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <Modal
+       <Modal
   animationType="slide"
   transparent={true}
   visible={isFullNameModalVisible}
@@ -195,11 +230,20 @@ const SettingsScreen = ({ navigation }) => {
       <StyledText style={[styles.modalTitle, { color: activeColors.text }]}>
         Пожалуйста, заполните ваше ФИО
       </StyledText>
+      <TextInput
+        style={[styles.input, { backgroundColor: activeColors.secondary, color: activeColors.text }]}
+        placeholder="Имя"
+        placeholderTextColor={activeColors.text}
+        onChangeText={(text) => setFirstName(text)}
+      />
+      <TextInput
+        style={[styles.input, { backgroundColor: activeColors.secondary, color: activeColors.text }]}
+        placeholder="Фамилия"
+        placeholderTextColor={activeColors.text}
+        onChangeText={(text) => setLastName(text)}
+      />
       <TouchableOpacity
-        onPress={() => {
-          setIsFullNameModalVisible(false);
-          navigation.navigate('ProfileEdit'); // Навигация к экрану редактирования профиля
-        }}
+        onPress={() => setUserFullName(firstName, lastName)}
         style={[styles.confirmButton, { backgroundColor: activeColors.accent }]}
       >
         <StyledText style={{ color: activeColors.primary, fontSize: 18 }}>
@@ -216,7 +260,7 @@ const SettingsScreen = ({ navigation }) => {
       </TouchableOpacity>
     </View>
   </View>
-  </Modal>
+</Modal>
 
 
 

@@ -9,12 +9,11 @@ import { TabView, TabBar, SceneMap } from 'react-native-tab-view';
 import * as Haptics from 'expo-haptics';
 import DetailingPaymentSlider from "../DetailingPaymentSlider";
 import { generateOrderPdf } from './pdfGenerator';
-import getEnvVars from '../config';
 
-const { apiUrl } = getEnvVars();
 const initialLayout = { width: Dimensions.get('window').width };
 
 const AssignServiceScreen = () => {
+    
     const navigation = useNavigation();
     const route = useRoute();
     const { selectedOrder } = route.params;
@@ -61,7 +60,10 @@ const AssignServiceScreen = () => {
     const fetchServicesTotal = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${selectedOrder.id}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/GetSummOfDetailingServicesOnOrder?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -77,7 +79,10 @@ const AssignServiceScreen = () => {
     const handleCompleteOrder = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/CompleteDetailingOrder?id=${selectedOrder.id}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -98,7 +103,9 @@ const AssignServiceScreen = () => {
     const fetchAssignedServices = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${selectedOrder.id}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+             const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingService/AllDetailingServicesOnOrderAsync?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -164,7 +171,10 @@ const AssignServiceScreen = () => {
     const fetchOrderDetails = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingOrder/DetailsDetailingOrder?id=${selectedOrder.id}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingOrder/DetailsDetailingOrder?id=${selectedOrder.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -180,7 +190,10 @@ const AssignServiceScreen = () => {
     const fetchServices = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/Service/GetAllServices`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/Service/GetAllServices`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -198,7 +211,10 @@ const AssignServiceScreen = () => {
         try {
             setIsLoading(true);
             const token = await AsyncStorage.getItem('access_token_avtosat');
-            const response = await fetch(`${apiUrl}/api/DetailingService/PriceListForService?serviceId=${serviceId}&carId=${selectedOrder.carId}&modelCarId=${selectedOrder.modelCarId}`, {
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingService/PriceListForService?serviceId=${serviceId}&carId=${selectedOrder.carId}&modelCarId=${selectedOrder.modelCarId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -252,8 +268,10 @@ const AssignServiceScreen = () => {
             setIsLoading(true);
             const token = await AsyncStorage.getItem('access_token_avtosat');
             const finalPrice = selectedPrice ? selectedPrice.price : Number(editedPrice);
+            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+             const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
 
-            const response = await fetch(`${apiUrl}/api/DetailingService/CreateDetailingService`, {
+            const response = await fetch(`${cleanedSatApiURL}/api/DetailingService/CreateDetailingService`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -278,6 +296,7 @@ const AssignServiceScreen = () => {
             setIsLoading(false);
             setIsModalVisible(false);
         } catch (error) {
+            console.log(error.message);
             Alert.alert("Ошибка ❌", "Не удалось назначить услугу.");
             setIsLoading(false);
         }
@@ -297,7 +316,10 @@ const AssignServiceScreen = () => {
                     onPress: async () => {
                         try {
                             const token = await AsyncStorage.getItem('access_token_avtosat');
-                            const response = await fetch(`${apiUrl}/api/DetailingService/DeleteWashServiceFromOrder?id=${serviceId}`, {
+                            const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+                            const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+                            const response = await fetch(`${cleanedSatApiURL}/api/DetailingService/DeleteWashServiceFromOrder?id=${serviceId}`, {
                                 method: 'PATCH',
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -462,6 +484,12 @@ const AssignServiceScreen = () => {
       <Ionicons name="chatbubble-outline" size={24} color={activeColors.tint} />
       <Text style={[styles.detailText, { color: activeColors.tint }]}>
         Комментарий: {orderDetails?.comment ?? 'Нет комментария'}
+      </Text>
+    </View>
+    <View style={styles.detailRow}>
+      <Ionicons name="chatbubble-outline" size={24} color={activeColors.tint} />
+      <Text style={[styles.detailText, { color: activeColors.tint }]}>
+        Предоплата: {orderDetails?.prepayment  ?? 'Нет предоплаты'}₸
       </Text>
     </View>
     <View style={styles.detailRow}>

@@ -17,7 +17,6 @@ import CustomButton from "../components/CustomButton";
 import NetInfo from "@react-native-community/netinfo";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import getEnvVars from './config';
 
 // Функция для проверки правильности номера
 const validatePhoneNumber = (phoneNumber) => {
@@ -27,7 +26,6 @@ const validatePhoneNumber = (phoneNumber) => {
 };
 
 const RegisterScreen = ({ navigation }) => {
-  const { apiUrl } = getEnvVars();
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -39,7 +37,10 @@ const RegisterScreen = ({ navigation }) => {
 
   const fetchAndSaveOrganizationType = async (token) => {
     try {
-      const response = await fetch(`${apiUrl}/api/organization/GetTypeOfOrganization`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/organization/GetTypeOfOrganization`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -80,7 +81,10 @@ const RegisterScreen = ({ navigation }) => {
       if (!jwtToken) {
         throw new Error('Authentication token is not available.');
       }
-      const response = await fetch(`${apiUrl}/api/Token/RegisterToken`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      
+      const response = await fetch(`${cleanedSatApiURL}/api/Token/RegisterToken`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -125,7 +129,10 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     const unmaskedPhoneNumber = phoneNumber.replace(/[^\d]/g, '');
     try {
-      const response = await fetch(`${apiUrl}/api/Authenticate/register`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
+      const response = await fetch(`${cleanedSatApiURL}/api/Authenticate/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +159,8 @@ const RegisterScreen = ({ navigation }) => {
       Alert.alert("Успех", "Регистрация прошла успешно");
 
       // Автоматический вход после регистрации
-      const loginResponse = await fetch(`${apiUrl}/api/authenticate/login`, {
+      
+      const loginResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +182,7 @@ const RegisterScreen = ({ navigation }) => {
       await AsyncStorage.setItem('access_token_avtosat', token);
 
       // Получение роли пользователя
-      const roleResponse = await fetch(`${apiUrl}/api/authenticate/GetRole`, {
+      const roleResponse = await fetch(`${cleanedSatApiURL}/api/authenticate/GetRole`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

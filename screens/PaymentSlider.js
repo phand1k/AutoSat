@@ -2,9 +2,9 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Animated, PanResponder, StyleSheet, Modal, TouchableOpacity, TextInput, Alert, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import getEnvVars from './config';
 
 const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder }) => {
+
   const sliderWidth = useRef(new Animated.Value(0)).current;
   const [sliderActivated, setSliderActivated] = useState(false);
   const [confirmationVisible, setConfirmationVisible] = useState(false);
@@ -17,17 +17,19 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const [exceedsAmount, setExceedsAmount] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [totalToPay, setTotalToPay] = useState(0);
-  const { apiUrl } = getEnvVars();
 
   useEffect(() => {
     const fetchPaymentMethods = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token_avtosat');
+        const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+          const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
         if (!token) {
           throw new Error('Authentication token is not available.');
         }
 
-        const response = await fetch(`${apiUrl}/api/payment/GetAllPaymentMethods`, {
+        const response = await fetch(`${cleanedSatApiURL}/api/payment/GetAllPaymentMethods`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -80,7 +82,9 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
   const fetchOrderTotal = async (orderId) => {
     try {
       const token = await AsyncStorage.getItem('access_token_avtosat');
-      const response = await fetch(`${apiUrl}/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
+      const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/GetSummOfWashServicesOnOrder?id=${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -115,8 +119,11 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
 
   const confirmCompletion = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+      const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
     try {
-      const response = await fetch(`${apiUrl}/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/WashOrder/CompleteWashOrder?id=${selectedOrder.id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -194,12 +201,15 @@ const PaymentSlider = ({ onComplete, onSwipeLeft, onSwipeRight, selectedOrder })
 
   const handleConfirmPayment = async () => {
     const token = await AsyncStorage.getItem('access_token_avtosat');
+    const SatApiURL = await AsyncStorage.getItem('SatApiURL');
+     const cleanedSatApiURL = SatApiURL.trim(); // Удаляем лишние пробелы и символы новой строки
+
     const paymentMethodId = paymentMethods.find((method) => method.name === selectedPaymentMethod)?.id;
     console.log(paymentAmounts[selectedPaymentMethod])
     const amount = paymentAmounts[selectedPaymentMethod] || totalToPay;
 
     try {
-      const response = await fetch(`${apiUrl}/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
+      const response = await fetch(`${cleanedSatApiURL}/api/Transaction/CreateWashOrderTransactionAsync?washOrderId=${selectedOrder.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
