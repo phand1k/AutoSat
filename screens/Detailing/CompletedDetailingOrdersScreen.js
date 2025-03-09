@@ -267,7 +267,8 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
           licensePlate: resolvedOrder.carNumber,
           createdAt: resolvedOrder.dateOfCreated,
           timeAgo: formatDistanceToNow(parseISO(resolvedOrder.dateOfCreated), { locale: ru }),
-          imageUrl: 'https://logowik.com/content/uploads/images/order5492.jpg',
+          endedAt: resolvedOrder.dateOfCompleteService,
+          timeAgoEnded: formatDistanceToNow(parseISO(resolvedOrder.dateOfCompleteService), { locale: ru }),
           totalServices: `${sum} тенге`,
           paymentMethod: paymentInfo ? paymentInfo.paymentMethod.name : 'Неизвестно'
         };
@@ -430,7 +431,6 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
         <StyledText style={styles.itemName}>{item.name}</StyledText>
         <StyledText style={styles.itemDescription}>{item.description}</StyledText>
         <StyledText style={styles.itemTotalServices}>{item.totalServices}</StyledText>
-        <StyledText style={styles.itemTimeAgo}>Создано: {item.timeAgo} назад</StyledText>
         <View style={styles.paymentMethodContainer}>
           {item.paymentMethod === 'Наличный' ? (
             <MaterialIcons name="attach-money" size={20} color={activeColors.tint} />
@@ -442,6 +442,7 @@ const CompletedDetailingOrdersScreen = ({ navigation }) => {
           <StyledText style={[styles.paymentMethodText, { color: activeColors.tint }]}>
             {item.paymentMethod}
           </StyledText>
+          <StyledText style={styles.itemTimeAgo}>Завершено: {item.timeAgoEnded} назад</StyledText>
         </View>
       </View>
     </TouchableOpacity>

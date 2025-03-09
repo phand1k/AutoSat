@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { ThemeContext } from '../context/ThemeContext';
 import { colors } from '../config/theme';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import StyledText from '../components/texts/StyledText';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
 
 const predefinedMessages = [
   { id: 1, description: "Внимание! Скидка 20%", text: "🔥 Внимание! Скидка 20% на все услуги! 🔥 Запишитесь прямо сейчас! 📞 Ваш_номер_телефона  📍 г. Шымкент, ...", icon: 'cash-outline' },
@@ -17,11 +18,10 @@ const predefinedMessages = [
   { id: 4, description: "Подарок за ваш визит! Любая услуга – и бесплатное покрытие воском!", text: "🌟 Подарок за ваш визит! Любая услуга – и бесплатное покрытие воском! 📞 Запись: Ваш_номер_телефона  📍 г. Шымкент, ...", icon: 'gift' }
 ];
 
-const SalarySettingsScreen = ({ navigation }) => {
+const MarketingScreen = ({ navigation }) => {
   const { theme } = useContext(ThemeContext);
   const activeColors = colors[theme.mode];
   const [modalVisible, setModalVisible] = useState(false);
-
   const [message, setMessage] = useState('');
   const [phone, setPhone] = useState('+77024574566');
   const [address, setAddress] = useState('г. Шымкент, Дулати 183');
@@ -35,7 +35,7 @@ const SalarySettingsScreen = ({ navigation }) => {
     }).start();
   }, []);
 
-  const sendNewsletter = async () => {
+  const sendMarketingMessage = async () => {
     if (!message.trim()) {
       Alert.alert('Ошибка', 'Введите сообщение для рассылки');
       return;
@@ -81,7 +81,7 @@ const SalarySettingsScreen = ({ navigation }) => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color={activeColors.tint} />
             </TouchableOpacity>
-            <StyledText style={[styles.headerTitle, { color: activeColors.tint }]}>Рассылка сообщений</StyledText>
+            <StyledText style={[styles.headerTitle, { color: activeColors.tint }]}>Маркетинг и бонусы</StyledText>
           </View>
 
           {/* Памятка перед шаблонами */}
@@ -90,10 +90,11 @@ const SalarySettingsScreen = ({ navigation }) => {
               <Ionicons name="information-circle-outline" size={34} color="#fff" />
             </TouchableOpacity>
             <Text style={[styles.noteText, { color: "#fff" }]}>
-              Это шаблоны сообщений. Выберите подходящий шаблон, при необходимости измените номер телефона или адрес, и отправьте сообщение.
+              Это шаблоны маркетинговых сообщений. Выберите подходящий шаблон, при необходимости измените номер телефона или адрес, и отправьте сообщение.
             </Text>
           </LinearGradient>
 
+          {/* Список шаблонов */}
           <ScrollView style={styles.templatesContainer}>
             {predefinedMessages.map((item) => (
               <TouchableOpacity
@@ -109,7 +110,6 @@ const SalarySettingsScreen = ({ navigation }) => {
           </ScrollView>
 
           {/* Поле для ввода сообщения */}
-
           <TextInput
             style={[styles.messageInput, { borderColor: activeColors.secondary, color: activeColors.tint }]}
             value={message}
@@ -118,6 +118,11 @@ const SalarySettingsScreen = ({ navigation }) => {
             placeholderTextColor={activeColors.tint}
             multiline
           />
+
+          {/* Кнопка отправки */}
+          <TouchableOpacity style={[styles.sendButton, { backgroundColor: activeColors.accent }]} onPress={sendMarketingMessage}>
+            <Text style={[styles.sendButtonText, { color: activeColors.primary }]}>📨 Отправить</Text>
+          </TouchableOpacity>
 
           {/* Модальное окно */}
           <Modal
@@ -142,11 +147,6 @@ const SalarySettingsScreen = ({ navigation }) => {
               </View>
             </TouchableWithoutFeedback>
           </Modal>
-
-          {/* Кнопка отправки */}
-          <TouchableOpacity style={[styles.sendButton, { backgroundColor: activeColors.accent }]} onPress={sendNewsletter}>
-            <Text style={[styles.sendButtonText, { color: activeColors.primary }]}>📨 Отправить</Text>
-          </TouchableOpacity>
         </SafeAreaView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -272,4 +272,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SalarySettingsScreen;
+export default MarketingScreen;

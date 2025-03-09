@@ -117,11 +117,15 @@ const HomeScreens = () => {
       }
     } else if (item.title === "Клиенты") {
       navigation.navigate("SalarySettings", { userRole });
-    } else if (item.title === "Веб-версия") {
-      Linking.openURL('https://autosat.kz');
+    } else if (item.title === "Политика") {
+      Linking.openURL('https://autosat.kz/privacy-policy.html');
     } else if (item.title === "Статистика") {
       navigation.navigate("Statistics");
-    } else if (item.title === "Услуги") {
+    }
+    else if (item.title === "Продажи") {
+      navigation.navigate("Sales");
+    }
+     else if (item.title === "Услуги") {
       navigation.navigate("Список");
     }
   };
@@ -132,10 +136,10 @@ const HomeScreens = () => {
     { title: "Заказы", icon: "file-tray-stacked-outline", roles: ["Администратор", "Директор", "Мастер"] },
     { title: "Мои задачи", icon: "newspaper-outline", roles: ["Директор", "Администратор", "Мастер"], soon: true },
     { title: "Продажи", icon: "cart-outline", roles: ["Администратор", "Директор"], soon: true },
-    { title: "Клиенты", icon: "people-outline", roles: ["Администратор", "Директор"] },
+    { title: "Клиенты", icon: "people-outline", roles: ["Администратор", "Директор"], soon: true},
     { title: "Лояльность", icon: "layers-outline", roles: ["Директор"], soon: true},
     { title: "Услуги", icon: "briefcase-outline", roles: ["Администратор", "Директор", "Мастер"] },
-    { title: "Веб-версия", icon: "logo-chrome", roles: ["Администратор", "Директор", "Мастер"] },
+    { title: "Политика", icon: "logo-chrome", roles: ["Администратор", "Директор", "Мастер"] },
     { title: "Пригласить", icon: "pulse-outline", roles: ["Мастер", "Директор", "Администратор"] }
   ];
 
@@ -198,7 +202,7 @@ const HomeScreens = () => {
           ))}
         </View>
       </View>
-      <Text style={[styles.versionText, { color: activeColors.accent }]}>Версия 7.0.0</Text>
+      <Text style={[styles.versionText, { color: activeColors.accent }]}>Версия 10.0.0</Text>
 
       <Modal
         animationType="slide"

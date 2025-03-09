@@ -38,7 +38,8 @@ import RegisterWithOutOrganizationScreen from "./screens/RegisterWithOutOrganiza
 import BrandListScreen from "./screens/BrandListScreen";
 import NewsScreen from "./screens/NewsScreen";
 import StatisticsScreen from "./screens/StatisticsScreen";
-
+import SalesScreen from "./screens/SalesScreen";
+import WelcomeScreen from "./screens/WelcomeScreen";
 const Stack = createStackNavigator();
 const App = () => {
   
@@ -145,9 +146,14 @@ const App = () => {
       />
       <NavigationContainer>
         <Stack.Navigator initialRouteName="AuthLoading">
-          <Stack.Screen
+        <Stack.Screen
             name="AuthLoading"
             component={AuthLoadingScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Welcome"
+            component={WelcomeScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
@@ -173,6 +179,11 @@ const App = () => {
           <Stack.Screen
             name="AssignService"
             component={AssignServiceScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Sales"
+            component={SalesScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

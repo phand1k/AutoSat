@@ -30,6 +30,7 @@ const CreateDetailingOrderScreen = () => {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [filter, setFilter] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [brands, setBrands] = useState([]);
   const [originalBrands, setOriginalBrands] = useState([]);
   const [models, setModels] = useState([]);
@@ -67,6 +68,7 @@ const CreateDetailingOrderScreen = () => {
   };
 
   const fetchCarBrands = async () => {
+    setIsLoading(true); // Включаем загрузку
     const SatApiURL = await AsyncStorage.getItem('SatApiURL');
     const cleanedSatApiURL = SatApiURL.trim();
     try {
@@ -100,10 +102,14 @@ const CreateDetailingOrderScreen = () => {
       console.error('Error fetching car brands:', error);
       Alert.alert('Error', `Failed to fetch car brands: ${error.message}`);
     }
+    finally {
+      setIsLoading(false); // Выключаем загрузку
+    }
   };
 
   const fetchModelsByBrandId = async (id) => {
     setIsLoadingModels(true);
+    setIsLoading(true); // Включаем загрузку
     try {
       const SatApiURL = await AsyncStorage.getItem('SatApiURL');
       const cleanedSatApiURL = SatApiURL.trim();
@@ -130,6 +136,7 @@ const CreateDetailingOrderScreen = () => {
       Alert.alert('Ошибка', 'Не удалось загрузить данные.');
     } finally {
       setIsLoadingModels(false);
+      setIsLoading(false); // Выключаем загрузку
     }
   };
 
@@ -138,14 +145,14 @@ const CreateDetailingOrderScreen = () => {
       Alert.alert('Ошибка', 'Пожалуйста, заполните все обязательные поля.');
       return;
     }
-
+  
     try {
       setIsSubmitting(true);
       const token = await AsyncStorage.getItem('access_token_avtosat');
       if (!token) {
         throw new Error('Authentication token is not available.');
       }
-
+  
       const payload = {
         carId: selectedBrand.id,
         modelCarId: selectedModel.id,
@@ -154,7 +161,7 @@ const CreateDetailingOrderScreen = () => {
         comment: comment,
         prepayment: Number(prepayment) || 0,
       };
-
+  
       const SatApiURL = await AsyncStorage.getItem('SatApiURL');
       const cleanedSatApiURL = SatApiURL.trim();
       
@@ -166,18 +173,18 @@ const CreateDetailingOrderScreen = () => {
         },
         body: JSON.stringify(payload),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error data:', errorData);
         throw new Error(`Failed to create detailing order. HTTP status ${response.status}`);
       }
-
+  
       const orderData = await response.json();
       setDetailingOrderId(orderData.id);
-
-      resetState();
-
+  
+      resetState(); // Сбрасываем состояние
+  
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Создано✅', 'Заказ-наряд успешно создан, теперь назначьте услуги');
       navigation.navigate('AssignService', { selectedOrder: orderData });
@@ -197,6 +204,15 @@ const CreateDetailingOrderScreen = () => {
     setComment('');
     setPrepayment('');
     setStep(1);
+    setFilter('');
+    setBrands(originalBrands);
+    setModels(originalModels);
+    setIsLoading(false);
+    setIsLoadingModels(false);
+    setErrors({
+      carNumber: false,
+      phoneNumber: false,
+    });
   };
 
   const handleBack = () => {
@@ -284,6 +300,9 @@ const CreateDetailingOrderScreen = () => {
   );
 
   const renderStepContent = () => {
+    if (isLoading) {
+      return <ActivityIndicator size="large" color={activeColors.tint} />;
+    }
     switch (step) {
       case 1:
         return (
@@ -428,7 +447,7 @@ const CreateDetailingOrderScreen = () => {
             <TouchableOpacity
               style={[styles.modalButton, { backgroundColor: activeColors.accent }]}
               onPress={() => {
-                resetState();
+                resetState(); // Сбрасываем состояние
                 setConfirmCloseVisible(false);
                 navigation.goBack();
               }}

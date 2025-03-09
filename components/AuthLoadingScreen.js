@@ -11,7 +11,7 @@ const AuthLoadingScreen = () => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem('access_token_avtosat');
-        navigation.replace(token ? 'Footer' : 'Login');
+        navigation.replace(token ? 'Footer' : 'Welcome');
       } catch (error) {
         console.error('Ошибка при чтении токена из AsyncStorage:', error);
         navigation.replace('Login');

@@ -36,18 +36,35 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem("access_token_avtosat");
-      await AsyncStorage.removeItem("role_user_avtosat");
-
-      // Reset the navigation stack and navigate to the Login screen
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    } catch (error) {
-      console.error('Error removing the access token:', error);
-    }
+    // Показываем Alert с подтверждением
+    Alert.alert(
+      "Выход из системы", // Заголовок
+      "Вы уверены, что хотите выйти?", // Сообщение
+      [
+        {
+          text: "Отмена", // Кнопка "Отмена"
+          style: "cancel", // Стиль кнопки
+        },
+        {
+          text: "Выйти", // Кнопка "Выйти"
+          onPress: async () => { // Действие при нажатии
+            try {
+              await AsyncStorage.removeItem("access_token_avtosat");
+              await AsyncStorage.removeItem("role_user_avtosat");
+  
+              // Сброс стека навигации и переход на экран Welcome
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }],
+              });
+            } catch (error) {
+              console.error('Ошибка при удалении токена:', error);
+            }
+          },
+        },
+      ],
+      { cancelable: true } // Возможность закрыть Alert по клику вне его
+    );
   };
 
 
